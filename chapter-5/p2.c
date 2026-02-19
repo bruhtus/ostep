@@ -37,6 +37,20 @@ int main(void)
 		 */
 		int rc_wait = waitpid(rc, &wstatus, 0);
 
+		/*
+		 * `wstatus` store the status information
+		 * from child process. When we return child
+		 * process with exit code 42, `wstatus`
+		 * will have value 10752 which is two 8-bit
+		 * fields. So we are shifting by 8 bit like
+		 * this `wstatus >> 8` to get the exit code,
+		 * which is what the macro WEXITSTATUS()
+		 * does.
+		 *
+		 * References:
+		 * - https://stackoverflow.com/a/179652
+		 * - https://stackoverflow.com/a/3659673
+		 */
 		printf(
 			"Parent of %d (rc_wait: %d, PID: %d, wstatus: %d, child_exit_code: %d)\n",
 			rc,
