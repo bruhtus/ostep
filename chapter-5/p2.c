@@ -34,6 +34,13 @@ int main(void)
 		 * only when the child process finish but
 		 * also when the child process resumed by
 		 * a signal.
+		 *
+		 * Use 0 as the options means we use
+		 * no flags (Reference: https://stackoverflow.com/questions/22092088/the-waitpid-parameters/22092414#comment85574455_22092772).
+		 *
+		 * Maybe the statement "OR of zero" from man page means
+		 * something like `WCONTINUED | WNOHANG`,
+		 * similar how to use flags in `open` system call.
 		 */
 		int rc_wait = waitpid(rc, &wstatus, 0);
 
