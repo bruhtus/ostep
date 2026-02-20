@@ -15,11 +15,13 @@ int main(void)
 	 *
 	 * And the value of rc (which i assumed stands
 	 * for "return code"?) will change depends on
-	 * which process we are currently in. If we are
-	 * in the parent process, it will have value of
-	 * the child process ID (PID), and if we are in
-	 * the child process, it will print out the return
-	 * code of the fork() (?).
+	 * which process we are currently in.
+	 *
+	 * If the fork process succeed, the PID of child
+	 * process is returned in the parent process and
+	 * 0 is returned in the child process. And if the
+	 * fork process failed, -1 is returned in the
+	 * _parent process_.
 	 */
 	int rc = fork();
 
