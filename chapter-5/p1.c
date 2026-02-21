@@ -25,6 +25,10 @@ int main(void)
 	 */
 	int rc = fork();
 
+	/*
+	 * Start copy the instructions from here
+	 * until the end of the function.
+	 */
 	printf("return code: %d\n", rc);
 
 	if (rc < 0) {
@@ -39,6 +43,8 @@ int main(void)
 			getpid()
 		);
 	}
+
+	printf("Executed!\n");
 
 	return 0;
 }
