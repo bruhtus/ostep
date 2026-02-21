@@ -18,7 +18,7 @@ int main(void)
 	} else if (rc == 0) {
 		printf("Child (PID: %d)\n", getpid());
 
-		char *const my_args[3] = {
+		const char *const my_args[3] = {
 			"wc",
 			__FILE__,
 			NULL
@@ -39,7 +39,7 @@ int main(void)
 		 * (or statement) after exec() is not
 		 * executed.
 		 */
-		int err = execvp(my_args[0], my_args);
+		int err = execvp(my_args[0], (char **)my_args);
 
 		/*
 		 * exec() will only return a value when
