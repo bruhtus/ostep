@@ -3,6 +3,16 @@
 #include <sys/wait.h>
 
 /*
+ * This mechanism is kind of similar to how the shell (like
+ * bash, zsh, and so on) execute a program.
+ *
+ * Here's the simplified illustration of how the shell
+ * run a program:
+ * prompt> wc p3.c (wait() the program to finish)
+ * prompt> wc p3.c (fork() into child process)
+ * wc p3.c (exec() in the child process)
+ * prompt> (go back to parent process when finish)
+ *
  * Reference:
  * https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-api.pdf
  */
