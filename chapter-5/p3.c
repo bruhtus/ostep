@@ -38,6 +38,12 @@ int main(void)
 		 * That's why the next instruction
 		 * (or statement) after exec() is not
 		 * executed.
+		 *
+		 * execvp() second argument have type
+		 * `char *const []`, so does that means
+		 * execvp() will change the character that
+		 * the pointer points to? Still not sure if
+		 * using string literal is a good idea here.
 		 */
 		int err = execvp(my_args[0], (char **)my_args);
 
