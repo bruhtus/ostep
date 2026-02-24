@@ -62,9 +62,8 @@ int main(void)
 		 * an error occured, such as when the
 		 * executable does not exist.
 		 */
-		if (err == -1) {
+		if (err == -1)
 			perror("exec() error");
-		}
 
 		printf("This should not be executed\n");
 	} else {
