@@ -68,6 +68,13 @@ int main(void)
 		 * of string literal directly to prevent
 		 * accidental modification of the string
 		 * literal in another function.
+		 *
+		 * And this is kind of interesting, do we
+		 * use the same call stack when using exec()?
+		 * Because if we are replacing the current
+		 * call stack, these variables would become
+		 * a dangling pointer (a pointer which points
+		 * to non-exist memory), i assumed (?).
 		 */
 		char cmd[] = "wc";
 		char cmd_args[] = __FILE__;
