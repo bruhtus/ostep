@@ -92,7 +92,27 @@ int main(void)
  */
 static void sig_handler(int signum)
 {
-	char msg[] = "good bye\n";
+	switch (signum) {
+		case SIGCHLD:
+			char msg[] = "good bye\n";
 
-	write(STDOUT_FILENO, msg, sizeof(msg));
+			write(
+				STDOUT_FILENO,
+				msg,
+				sizeof(msg)
+			);
+
+			break;
+
+		default:
+			char default_msg[] = "Unrecognized signal\n";
+
+			write(
+				STDOUT_FILENO,
+				default_msg,
+				sizeof(default_msg)
+			);
+
+			break;
+	}
 }
