@@ -61,12 +61,8 @@ int main(void)
 			&timeout
 		);
 
-		if (rc_delay < 0) {
-			perror("select() error");
-			return 1;
-		} else if (rc_delay == 0) {
+		if (rc_delay == 0)
 			printf("child process timeout\n");
-		}
 	}
 
 	return 0;
