@@ -68,7 +68,31 @@ int main(void)
 	return 0;
 }
 
+/*
+ * When performing buferred I/O on a file, the stdio
+ * functions must maintain the allocated data buffer along
+ * with associated counters and indexes (or pointers) that
+ * record the amount of data and the current position in the
+ * buffer.
+ *
+ * Let's say the main program is in the middle of calling
+ * printf(), where the buffer and associated variables have
+ * been partially updated. During that printf() process in
+ * main program, if the program interrupted by a signal
+ * handler that also call printf(), then the printf() in
+ * signal handler will operate on inconsistent data with
+ * unpredictable result.
+ *
+ * In general, a function is async-signal-safe either because
+ * it is reenterant or its execution can't be interupted by
+ * a signal handler.
+ *
+ * Reference:
+ * `man signal-safety`
+ */
 static void sig_handler(int signum)
 {
-	printf("good bye\n");
+	char msg[] = "good bye\n";
+
+	write(STDOUT_FILENO, msg, sizeof(msg));
 }
