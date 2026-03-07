@@ -32,10 +32,10 @@ int main(void)
 	 * process terminate on another system than
 	 * linux.
 	 *
-	 * What happen when we put signal() after calling
+	 * What happen when we put sigaction() after calling
 	 * fork()?
 	 * Currently still not sure what is the difference
-	 * between calling signal() before or after fork().
+	 * between calling sigaction() before or after fork().
 	 */
 	int rc_sigaction = sigaction(
 		SIGCHLD,
