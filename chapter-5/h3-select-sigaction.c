@@ -110,7 +110,14 @@ static void sig_handler(int signum)
 			break;
 
 		default:
-			printf("Unrecognized signal\n");
+			char default_msg[] = "Unrecognized signal\n";
+
+			write(
+				STDOUT_FILENO,
+				default_msg,
+				sizeof(default_msg)
+			);
+
 			break;
 	}
 }
