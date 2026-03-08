@@ -58,6 +58,16 @@ int main(void)
 	} else {
 		struct timeval timeout = {10, 0};
 
+		/*
+		 * We block the parent process with
+		 * select() for 10 seconds, and then
+		 * when the child process finish,
+		 * we execute the sig_handler().
+		 *
+		 * So if the child process take longer
+		 * than the timeout, the sig_handler()
+		 * might not be executed.
+		 */
 		int rc_delay = select(
 			0,
 			NULL,
