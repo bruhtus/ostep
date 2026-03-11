@@ -19,8 +19,34 @@ static void sig_handler(int);
  */
 int main(void)
 {
+	/*
+	 * The sa_mask is a temporary signal mask used
+	 * during the signal handler execution, which means
+	 * when we encounter those signal during
+	 * the execution of the signal handler, we will
+	 * _ignore_ those signal (?).
+	 *
+	 * In the example below, we will ignore SIGINT signal
+	 * (usually using `ctrl-c`) when we are executing
+	 * the signal handler. And after we finish the signal
+	 * handler, the SIGINT signal will be evaluated in
+	 * the main program.
+	 *
+	 * References:
+	 * - https://csresources.github.io/SystemProgrammingWiki/SystemProgramming/Signals,-Part-2:-Pending-Signals-and-Signal-Masks/
+	 * - https://cs341.cs.illinois.edu/coursebook/Signals
+	 * - https://sourceware.org/glibc/manual/latest/html_node/Process-Signal-Mask.html
+	 * - https://www.man7.org/tlpi/code/online/dist/signals/signal_functions.c.html
+	 * - https://stackoverflow.com/a/17572787
+	 */
+	sigset_t sig_mask;
+	sigemptyset(&sig_mask);
+	sigaddset(&sig_mask, SIGINT);
+
 	struct sigaction act = {
-		.sa_handler = sig_handler
+		.sa_handler = sig_handler,
+		.sa_mask = sig_mask,
+		.sa_flags = 0
 	};
 
 	/*
@@ -100,10 +126,12 @@ int main(void)
  *
  * In general, a function is async-signal-safe either because
  * it is reenterant or its execution can't be interupted by
- * a signal handler.
+ * a signal handler. Reenterant in here means that the function
+ * can be frozen at any point and executed again.
  *
- * Reference:
- * `man signal-safety`
+ * References:
+ * - `man signal-safety`
+ * - https://cs341.cs.illinois.edu/coursebook/Signals#handling-signals
  */
 static void sig_handler(int signum)
 {
@@ -116,6 +144,8 @@ static void sig_handler(int signum)
 				msg,
 				sizeof(msg)
 			);
+
+			sleep(5);
 
 			break;
 
