@@ -96,6 +96,15 @@ static void print_signal_set(const sigset_t *signal_set)
 {
 	unsigned i;
 
+	/*
+	 * This is the available signals from
+	 * command `kill -l`, except for
+	 * `SIGKILL` and `SIGSTOP` because
+	 * we can't catch those signals.
+	 *
+	 * Check "ERRORS" section from
+	 * `man 2 sigaction` for reference.
+	 */
 	const struct siglist signal_list[] = {
 		CONVERT_SIGLIST(SIGHUP),
 		CONVERT_SIGLIST(SIGINT),
