@@ -13,6 +13,7 @@ struct siglist {
 /*
  * To list all the signal:
  * kill -l | tr ' ' '\n' | sed 's/^/SIG/'
+ * kill -l | sed 's/\w\+/SIG\0/g' | tr ' ' '\n'
  *
  * References:
  * - https://github.com/skuhl/sys-prog-examples/blob/master/simple-examples/sigprocmask.c
