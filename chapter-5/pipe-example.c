@@ -40,7 +40,11 @@ int main(void)
 	/*
 	 * We need to close the write end of the pipe
 	 * so that we don't _hang up_ when reading the
-	 * read end of the pipe.
+	 * read end of the pipe in the loop below.
+	 *
+	 * If we didn't close the write end of the pipe,
+	 * the loop will continue because read() will never
+	 * get into End of File (EoF) condition.
 	 */
 	if (close(fds[1]) == -1) {
 		perror("close() error");
