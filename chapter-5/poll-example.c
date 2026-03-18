@@ -59,6 +59,12 @@ int main(void)
 	 * If we type more characters than the provided
 	 * buffer, we will sent the remaining character to
 	 * the shell too.
+	 *
+	 * We need to press `enter` to terminate the line
+	 * for stdin with `\n` (new line character). That's
+	 * why we give this 2 characters, instead of
+	 * 1 character because the expected input characters
+	 * are 2 (any character + new line character).
 	 */
 	if (1) {
 		char buf[2];
