@@ -36,12 +36,14 @@ int main(void)
 		return 1;
 	} else if (rc_fork == 0) {
 		printf("hello\n");
+		sleep(2);
 	} else {
 		int signum_sigwait;
 
 		sigset_t signal_set, old_signal_set;
 		sigemptyset(&signal_set);
 		sigaddset(&signal_set, SIGCHLD);
+		sigaddset(&signal_set, SIGINT);
 
 		/*
 		 * Before we use sigwait(), we need
@@ -70,6 +72,15 @@ int main(void)
 			return 69;
 		}
 
+		/*
+		 * sigwait() suspend the process until
+		 * _one_ of the signals in the signal
+		 * set becomes pending.
+		 *
+		 * So if we have multiple signals in
+		 * the signal set, we only need one of
+		 * them to becomes pending.
+		 */
 		int rc_sigwait = sigwait(
 			&signal_set,
 			&signum_sigwait
