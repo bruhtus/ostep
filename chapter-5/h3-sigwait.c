@@ -38,12 +38,36 @@ int main(void)
 		printf("hello\n");
 		sleep(2);
 	} else {
-		int signum_sigwait;
+		int signum_sigwait, rc_sigprocmask;
+		sigset_t signal_set, old_signal_set, prev_sigmask;
 
-		sigset_t signal_set, old_signal_set;
 		sigemptyset(&signal_set);
 		sigaddset(&signal_set, SIGCHLD);
-		sigaddset(&signal_set, SIGINT);
+
+		sigemptyset(&prev_sigmask);
+		sigaddset(&prev_sigmask, SIGINT);
+
+		/*
+		 * Trying out the difference between
+		 * SIG_SETMASK and SIG_BLOCK for
+		 * sigprocmask().
+		 *
+		 * When we use SIG_SETMASK, we will
+		 * _replace_ the current signal set to
+		 * the new signal set. But when we use
+		 * SIG_BLOCK, we _append_ the current
+		 * signal set with the new signal set.
+		 */
+		rc_sigprocmask = sigprocmask(
+			SIG_SETMASK,
+			&prev_sigmask,
+			NULL
+		);
+
+		if (rc_sigprocmask == -1) {
+			perror("sigprocmask() failed");
+			return 69;
+		}
 
 		/*
 		 * Before we use sigwait(), we need
@@ -61,13 +85,13 @@ int main(void)
 		 * delivered immediately without going
 		 * through the _pending_ state.
 		 */
-		int rc_sigprocmask = sigprocmask(
-			SIG_SETMASK,
+		rc_sigprocmask = sigprocmask(
+			SIG_BLOCK,
 			&signal_set,
 			&old_signal_set
 		);
 
-		if (rc_sigprocmask < 0) {
+		if (rc_sigprocmask == -1) {
 			perror("sigprocmask() failed");
 			return 69;
 		}
