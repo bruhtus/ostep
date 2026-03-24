@@ -57,6 +57,27 @@ int main(void)
 		 * the new signal set. But when we use
 		 * SIG_BLOCK, we _append_ the current
 		 * signal set with the new signal set.
+		 *
+		 * There's a difference when putting
+		 * the sigprocmask() before or after
+		 * fork().
+		 *
+		 * When we put sigprocmask() before
+		 * fork(), the SIGINT will also blocked
+		 * in the child process (?), so that the
+		 * child process still executing sleep()
+		 * and not triggering sigwait() in the
+		 * parent process.
+		 *
+		 * But when we put sigprocmask() after
+		 * fork() in the parent process section,
+		 * the child process will accept the
+		 * SIGINT signal and then going back to
+		 * parent process and sigwait() will
+		 * receive the SIGINT signal in the
+		 * pending list, so we continue the
+		 * execution in the parent process
+		 * section.
 		 */
 		rc_sigprocmask = sigprocmask(
 			SIG_SETMASK,
