@@ -2,7 +2,22 @@
 #include <signal.h>
 #include <unistd.h>
 
-static void sig_handler(int);
+/*
+ * Using the type sig_atomic_t give guarantee
+ * that the variable will be modified
+ * atomically (?). This is to prevent race
+ * condition when using async signal handler.
+ *
+ * Global or static variable have default value
+ * of 0.
+ *
+ * References:
+ * - https://linuxvox.com/blog/why-can-only-async-signal-safe-functions-be-called-from-signal-handlers-safely/#pitfall-3-ignoring-volatile-sig_atomic_t
+ * - https://www.sanfoundry.com/c-tutorials-importance-volatile-data-context-signals/
+ */
+static volatile sig_atomic_t is_child_finish;
+
+static void sigchld_handler(int);
 
 int main(void)
 {
@@ -15,7 +30,7 @@ int main(void)
 	}
 
 	struct sigaction act = {
-		.sa_handler = sig_handler,
+		.sa_handler = sigchld_handler,
 		.sa_flags = 0,
 		.sa_mask = empty_set
 	};
@@ -34,7 +49,7 @@ int main(void)
 			return 69;
 
 		case 0:
-			printf("hello\n");
+			puts("hello");
 			break;
 
 		default:
@@ -45,15 +60,27 @@ int main(void)
 			 * or pselect().
 			 */
 			sleep(2);
+
+			if (is_child_finish == 1)
+				puts("good bye");
+			else if (is_child_finish == -1)
+				puts("unknown signal");
+
 			break;
 	}
 
 	return 0;
 }
 
-static void sig_handler(int signum)
+static void sigchld_handler(int signum)
 {
-	char msg[] = "good bye\n";
+	switch (signum) {
+		case SIGCHLD:
+			is_child_finish = 1;
+			break;
 
-	write(STDOUT_FILENO, msg, sizeof(msg));
+		default:
+			is_child_finish = -1;
+			break;
+	}
 }
