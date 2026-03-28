@@ -15,13 +15,17 @@ int main(void)
 			printf("Child (PID: %d)\n", getpid());
 
 			/*
-			 * Unlike execl(), we only need to
-			 * provide the executable name, instead
-			 * of path.
+			 * Unlike execl(), we can provide
+			 * only the executable name, instead
+			 * of full path of the executable.
 			 *
-			 * Maybe that's because execlp()
-			 * searching from the PATH env
-			 * variable (?).
+			 * If we provide the first argument
+			 * with slash (/), which means we
+			 * only provide with the executable
+			 * name, execlp() and others exec
+			 * function variants will search the
+			 * executable in PATH environment
+			 * variable of the current shell.
 			 */
 			if (
 				execlp(
