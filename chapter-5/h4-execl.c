@@ -47,11 +47,24 @@ int main(void)
 			 * message, like this:
 			 * wc -1
 			 *
+			 * Using `(void *)0` instead of NULL
+			 * to make sure that we are a null
+			 * pointer. In some system, NULL might
+			 * not translate to `(void *)0`.
+			 *
 			 * References:
 			 * - http://www.linuxonly.nl/docs/2/2_GCC_4_warnings_about_sentinels.html
 			 * - https://stackoverflow.com/a/12122764
+			 * - https://stackoverflow.com/a/31519147
 			 */
-			if (execl("/bin/ls", "ls", "-1", NULL) == -1) {
+			if (
+				execl(
+					"/bin/ls",
+					"ls",
+					"-1",
+					(void *)0
+				) == -1
+			) {
 				perror("execl() failed");
 				return 69;
 			}
