@@ -48,9 +48,9 @@ int main(void)
 			 * wc -1
 			 *
 			 * Using `(void *)0` instead of NULL
-			 * to make sure that we are a null
-			 * pointer. In some system, NULL might
-			 * not translate to `(void *)0`.
+			 * to make sure that we are using
+			 * a null pointer. In some system, NULL
+			 * might not translate to `(void *)0`.
 			 *
 			 * References:
 			 * - http://www.linuxonly.nl/docs/2/2_GCC_4_warnings_about_sentinels.html
