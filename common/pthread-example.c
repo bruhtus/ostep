@@ -9,8 +9,11 @@
  * We can use atomic_int (from stdatomic.h)
  * to make sure that the increment is atomic.
  */
-static int counter;
-static atomic_int atomic_counter;
+struct thread_args {
+	long loops;
+	int *counter;
+	atomic_int *counter_atm;
+};
 
 void *worker(void *);
 
@@ -29,6 +32,9 @@ int main(int argc, char *argv[])
 	pthread_t p1, p2;
 	int retval_pthread;
 	char *end_ptr;
+
+	int counter = 0;
+	atomic_int counter_atm = 0;
 
 	const char *loops_input = argv[1];
 
@@ -64,11 +70,11 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Initial value (non-atomic): %d\n", counter);
-	printf("Initial value (atomic): %d\n", atomic_counter);
+	printf("Initial value (atomic): %d\n", counter_atm);
 
-	long loops_per_thread[] = {
-		loops,
-		loops,
+	struct thread_args args_per_thread[] = {
+		{loops, &counter, &counter_atm},
+		{loops, &counter, &counter_atm},
 	};
 
 	/*
@@ -82,7 +88,7 @@ int main(int argc, char *argv[])
 		&p1,
 		NULL,
 		worker,
-		loops_per_thread
+		args_per_thread
 	);
 
 	if (retval_pthread != 0) {
@@ -99,7 +105,7 @@ int main(int argc, char *argv[])
 		&p2,
 		NULL,
 		worker,
-		(loops_per_thread + 1)
+		(args_per_thread + 1)
 	);
 
 	if (retval_pthread != 0) {
@@ -137,27 +143,40 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Final value (non-atomic): %d\n", counter);
-	printf("Final value (atomic): %d\n", atomic_counter);
+	printf("Final value (atomic): %d\n", counter_atm);
 
 	return 0;
 }
 
 void *worker(void *arg)
 {
-	long i, loops;
+	long i;
 
 	/*
 	 * Reference:
 	 * https://www.gnu.org/software/c-intro-and-ref/manual/html_node/Void-Pointers.html
 	 */
-	if (arg != NULL)
-		loops = *((long *)arg);
-	else
-		loops = 100000;
+	struct thread_args *data = arg;
 
-	for (i = 0; i < loops; ++i) {
-		++counter;
-		++atomic_counter;
+	/*
+	 * Currently still not sure how to handle
+	 * error in pthread.
+	 */
+	if (data == NULL) {
+		puts("worker() arg should not be null");
+		return NULL;
+	}
+
+	for (i = 0; i < data->loops; ++i) {
+		/*
+		 * Why doing
+		 * *(data->counter_atm) = *(data->counter_atm) + 1;
+		 * produce different result from
+		 * ++(*(data->counter_atm));
+		 * in this case, even for the atomic one?
+		 */
+		++(*(data->counter));
+		++(*(data->counter_atm));
 	}
 
 	return NULL;
