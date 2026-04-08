@@ -2,6 +2,10 @@
 #include <time.h>
 #include <unistd.h>
 
+/*
+ * Reference:
+ * https://stackoverflow.com/a/17126785 (macro vs enum)
+ */
 #define NS_PER_SECOND 1000000000
 
 void sub_timespec(
