@@ -7,6 +7,7 @@
  * https://stackoverflow.com/a/17126785 (macro vs enum)
  */
 #define NS_PER_SECOND 1000000000
+#define BUF_SIZE 2
 
 void sub_timespec(
 	struct timespec,
@@ -17,7 +18,7 @@ void sub_timespec(
 int main(void)
 {
 	struct timespec start_time, end_time, result_time;
-	int buf[2], retval_gettime;
+	int buf[BUF_SIZE], retval_gettime;
 
 	retval_gettime = clock_gettime(
 		CLOCK_REALTIME,
@@ -32,7 +33,7 @@ int main(void)
 	/*
 	 * Press Enter to finish the operation.
 	 */
-	if (read(STDIN_FILENO, buf, 2) == -1) {
+	if (read(STDIN_FILENO, buf, BUF_SIZE) == -1) {
 		perror("read() failed");
 		return 69;
 	}
