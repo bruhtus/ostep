@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -15,7 +18,16 @@ static void cleanup_parent(void);
 int main(void)
 {
 	struct timespec start_time, end_time, result_time;
+	cpu_set_t mask;
 	int retval_gettime;
+
+	CPU_ZERO(&mask);
+	CPU_SET(1, &mask);
+
+	if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+		perror("sched_setaffinity() failed");
+		return 69;
+	}
 
 	if (pipe(pipe_fds) == -1) {
 		perror("pipe() failed");
