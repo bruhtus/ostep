@@ -21,6 +21,14 @@ int main(int argc, char *(argv[]))
 		return 69;
 	}
 
+	/*
+	 * This is for `pmap` command.
+	 * We can check the memory map for this
+	 * program by running:
+	 * pmap -x <PID>
+	 */
+	printf("PID: %d\n", getpid());
+
 	long input = strtol(argv[1], &endptr, 10);
 
 	if (errno == ERANGE) {
