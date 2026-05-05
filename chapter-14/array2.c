@@ -4,6 +4,12 @@
 int main(void)
 {
 	int *arr = malloc(sizeof(*arr) * 100);
+
+	if (arr == NULL) {
+		perror("malloc() failed");
+		return 69;
+	}
+
 	arr[0] = 0; // Prevent uninitialized read.
 
 	free(arr);
