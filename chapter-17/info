@@ -1,0 +1,46 @@
+free list 1: 1 (2B), 2 (4B), 3 (8B)
+free list 2: 1 (2B), 3 (8B)
+free list 3 (insert-front): 2 (4B), 1 (2B), 3 (8B)
+free list 3 (insert-back): 1 (2B), 3 (8B), 2 (4B)
+free list 3 (sizesort+): 1 (2B), 2 (4B), 3 (8B)
+free list 3 (sizesort-): 3 (8B), 2 (4B), 1 (2B)
+free list 3 (addrsort): 1 (2B), 2 (4B), 3 (8B)
+
+Representation:
+heap: 100 bytes
+start address: 1000
+header size: 4 bytes
+alignment size: 4 bytes
+free list return order: ADDRSORT // Looks like the ordering happens when freeing the memory, not when allocating memory.
+free list search policy: BEST
+
+ptr[0]:
+alloc(3): 4 (header) + 3 + 1 (alignment) = 8 bytes (modulo 4)
+return address: 1004 - 1006 (1000 - 1003 for header, 1007 for alignment)
+free list (size 1, searched 1 element):
+- [addr: 1008, size: 92 bytes]
+
+free(ptr[0]):
+free list (size 2):
+- [addr: 1000, size: 8 bytes]
+- [addr: 1008, size: 92 bytes]
+
+ptr[1]:
+alloc(5): 4 (header) + 5 + 3 (alignment) = 12 bytes
+return address: 1012 - 1016 (1008 - 1011 for header, 1017 - 1019 for alignment)
+free list (size 2, searched 2 elements):
+- [addr: 1000, size: 8 bytes]
+- [addr: 1020, size: 80 bytes]
+
+free(ptr[1]):
+free list (size 3):
+- [addr: 1000, size: 8 bytes]
+- [addr: 1008, size: 12 bytes]
+- [addr: 1020, size: 80 bytes]
+
+ptr[2]:
+alloc(8): 4 (header) + 8 = 12 bytes
+return address: 1012 - 1016 (1008 - 1011 for header, 1017 - 1019 for alignment)
+free list (size 2, searched 3 elements (depends on previous free list)):
+- [addr: 1000, size: 8 bytes]
+- [addr: 1020, size: 80 bytes]
