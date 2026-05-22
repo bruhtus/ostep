@@ -1,0 +1,45 @@
+Chapter 5:
+- Q: How to write to a file from child and parent process at the same time?
+- Q: What happen when we put signal() or sigaction() after calling fork()?
+
+Chapter 6:
+- Q: Is switching function considered "context switching" in operating system?
+  A: No, context switch in here means switching from user mode to kernel mode.
+     So, when switching into another function, as long as we didn't switch into
+     kernel mode, we are not "context switching".
+
+Chapter 15:
+- Q: How do we manage the address space for each processes?
+- Q: If the _possible_ virtual memory address is bigger than the physical
+     memory address, how do we _keep track_ of each processes address
+     space?
+- Q: Do we constantly switching the process everytime the timer interupt occurs?
+- Q: How many memory do kernel stack has, so that we can save the register from
+     multiple processes?
+
+Chapter 16:
+- Q: Why we need 2 bits to accomplish our task when we have 3 segments?
+  A: Because when we only use 1 bit, we can only represent 2 segments,
+     that is 0 and 1. But with 2 bits, we can represent 4 segments,
+     that is 00, 01, 10, 11. That's why we need 2 bits to represent 3 segments.
+- Q: Is stack always grows backwards?
+
+Chapter 17:
+- Q: Is there any specific order when we decide to take free memory from
+     "free list"?
+- Q: How do we decide which memory region we should split?
+- Q: Do we need to have multiple contiguous chunk of memory to be able to do
+     coalescing those chunk of memory?
+- Q: Do we store the header block (the info about memory allocated, such as
+     size and magic number) for allocated memory in the free list too?
+- A: Looks like the header block is not in the free list too.
+     So when user request N bytes of memory, the allocator does not search for
+     free chunk of size N, but it search for free chunk of size N + header size.
+     And then, when we try to free() those memory allocation, we can subtract
+     the pointer to read the header information.
+     The header information is before the _actual_ requested memory
+     (in contiguous order).
+- Q: How much heap memory do we have? Is it
+     "address space size - (code segment + stack segment)"?
+- Q: If we have only have N size of free chunk, not N size + header size,
+     do we take that free chunk or return NULL?
