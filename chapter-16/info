@@ -1,0 +1,32 @@
+division between segments = address space size / 2 (because there are 2 segments)
+
+base seg0: segment 0 base
+limit seg0: segment 0 limit
+base seg1: segment 1 base - segment 1 limit
+limit seg1: segment 1 limit
+nbase seg1: segment 1 base + segment 1 limit
+
+seg0:
+  - check if virtual address >= limit seg0.
+  - if yes, segfault.
+    if no, calculate physical address (base seg0 + virtual address).
+
+seg1:
+  - calculate physical address (nbase seg1 + (virtual address - address space size))
+  - if physical address < base seg1, segfault.
+    if not, that means valid.
+
+REPRESENTATION:
+division between segments = 64
+
+base seg0: 0
+limit seg0: 20
+base seg1: 492
+limit seg1: 20
+nbase seg1: 512
+
+0: 108 >= 64 -> seg1 -> 492
+1: 97 >= 64 -> seg1 -> segfault
+2: 53 < 64 -> seg0 -> segfault
+3: 33 < 64 -> seg0 -> segfault
+4: 65 > 64 -> seg1 -> segfault
