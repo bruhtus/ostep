@@ -1,0 +1,461 @@
+Notes:
+Data has no inherent meaning and must be _interpreted_ by whoever is reading it,
+and the meaning is unclear until someone _clarifies_ the intention of the data.
+Reference:
+https://betterexplained.com/articles/understanding-big-and-little-endian-byte-order/
+
+Notes:
+The statement "recall that 10 bits would be needed for a 1 KiB page size,
+and just add two more to get to 4 KiB" means 10 bits came from
+2 ^ 10 (2 power 10, and 10 in here is called "exponent") which result in
+1024 (that is 1 KiB), and then we need to add 2 more bits to get
+4096 (that is 4 KiB), which is 2 ^ 12 (2 power 12). And that's how we got
+12 bit offset with 4 KiB page size.
+
+Notes (Aside: Why No Valid Bit?):
+When P=0 (present bit is false), there are 2 possible conditions:
+- The virtual page number exist in page table but didn't have the related
+  page frame number (valid).
+- The virtual page number does not exist in page table (invalid).
+
+The 2 problems with paging:
+- page table might be too big.
+- using page table might be too slow (because extra memory reference).
+
+base address + (array index * sizeof(int))
+
+jne -> jump if not equal
+
+Assumption:
+- where the code snippet and array in memory.
+- the contents and location of the page table.
+- virtual address space size is 64 KiB.
+- page size is 1 KiB.
+- page table located in physical address 1024 (1 KiB).
+
+Each instruction fetch will generate 2 memory references (?):
+- virtual memory address (to get physical memory address)
+- physical memory address (to put it in the CPU for processing)
+
+Figure 18.7 first graph reading (PageTable[1] or Page Table Entry 1):
+- movl (index 0)
+
+- incl (index 1)
+- cmpl
+- jne
+- movl
+
+- incl (index 2)
+- cmpl
+- jne
+- movl
+
+- incl (index 3)
+- cmpl
+- jne
+- movl
+
+- incl (index 4)
+- cmpl
+- jne
+- movl
+
+- incl (index 5)
+- cmpl
+- jne
+
+Notes:
+In section 18.5 example:
+```
+int main(void)
+{
+  int i;
+  int array[1000];
+
+  for (i < 0; i < 1000; ++i)
+    array[i] = 0;
+
+  return 0;
+}
+```
+We assume that the array resides in virtual address 40000 until 43999,
+with the size of 4000 bytes which is
+"4 (size of int) * 1000 (total integers)". The virtual pages for that
+decimal range (assumming page size 1 KB and address space size 64 KB)
+are:
+- VPN: 39 -> hold 250 integers -> hold 1000 bytes (1 integer need 4 bytes)
+- VPN: 40 -> hold 250 integers -> hold 1000 bytes (1 integer need 4 bytes)
+- VPN: 41 -> hold 250 integers -> hold 1000 bytes (1 integer need 4 bytes)
+- VPN: 42 -> hold 250 integers -> hold 1000 bytes (1 integer need 4 bytes)
+
+Notes:
+In figure 18.7 ("A Virtual (And Physical) Memory Trace"), the x-axis
+for the entire trace shows memory access across the first 5 iterations
+of the loop, and there are 10 memory accesses for each iterations:
+- 4 instruction fetches: movl, incl, cmpl, jne (the bottom graph) in
+  page table entry 1 (related to top graph PageTable[1]).
+- 1 update to the memory: movl (the middle graph) in page table entry 39
+  (related to top graph PageTable[39]).
+- Each "instruction fetches" and "update to the memory" need to access the
+  memory twice. The first access is to get physical frame number (PFN)
+  from page table, and the second access is to get the data from physical
+  frame number (PFN). 5 memory access to page table + 5 memory access to
+  physical memory, hence 10 memory accesses (?).
+
+Page table: virtual page number (VPN) -> physical frame number (PFN)
+
+Format Page Table Entry:
+- Left-most bit is the valid bit (1 means valid, 0 means invalid).
+- If valid, the remaining bits is the Physical Frame Number (PFN).
+
+If the address space size increase, the page table entry will also
+increase (?).
+
+If the page size increase, the page table entry will decrease (?).
+
+Range in one page when "address space size" 16k (16384)
+and "page size" 1k (1024):
+0: 0 - 1023
+1: 1024 - 2047
+2: 2048 - 3071
+3: 3072 - 4095
+4: 4096 - 5119
+5: 5120 - 6143
+6: 6144 - 7167
+7: 7168 - 8191
+8: 8192 - 9215
+9: 9216 - 10239
+10: 10240 - 11263
+11: 11264 - 12287
+12: 12287 - 13311
+13: 13312 - 14335
+14: 14336 - 15359
+15: 15360 - 16384
+
+In the list of range in one page above, we got the 16 pages in
+the page table from the calculation of the _exponent_ from
+"address space size" and "page size". For example, address space
+size 16k (16384) can be translated to `2 ** 14` with 14 as the
+exponent, and then page size 1k (1024) can be translated to
+`2 ** 10` with 10 as the exponent. If we subtract the exponent
+from address space size and page size, it will become `14 - 10`
+and the result is `4`. So, the total pages in the page table is
+`2 ** 4 = 16`.
+
+Questions about simulation:
+Q: How to read the hex number from page table?
+A: Every hex numbers that are more than or equal `0x8`
+   is a valid address (like 0x9, 0xA, ...).
+
+   For example, let's say we have hex number from page
+   table like 0x80000006, and if we translate that to binary,
+   it would be something like this:
+   10000000 00000000 00000000 00000110
+
+   And from the information in the simulation:
+   The high-order (left-most) bit is the VALID bit.
+     If the bit is 1, the rest of the entry is the PFN.
+     If the bit is 0, the page is not valid.
+
+   If the left most bit is 1, it means it's a valid bit.
+   So hex number 0x80000006 is a valid address.
+
+   Reference:
+   https://github.com/remzi-arpacidusseau/ostep-homework/issues/49
+
+Q: How to determine the offset from the virtual address?
+A: page mask = page size - 1 (page size 1024, page mask 1023)
+   offset = virtual address & page mask
+   virtual page number = address space size - offset
+
+Q: Why do we need to use logarithm for calculating the bits?
+A: Because the bits is determined by the exponent from the
+   size. For example, to have 1024, how many exponent do we
+   need so that we get 1024 from number 2? And the answer is
+   10 (2 ** 10 = 1024). To _get_ this exponent, we can use
+   logarithm to calculate that (log2(1024) = 10). And because
+   the python `math.log()` might not have base parameter in
+   the older version and using euler's number
+   (natural logarithm, base e), we need to divide that by
+   `math.log(2)`. For example, `log2(1024)` is the same as
+   `log(1024) / log(2)` (assuming both `log()` has the same
+   base).
+
+   References:
+   - https://www.mathsisfun.com/algebra/logarithms.html
+   - https://www.rapidtables.com/math/algebra/logarithm/Logarithm_Base_Change.html
+
+Q: What left shift do (from expression `pfn << pagebits`)?
+A: When we do bitwise operation left shift like
+   `pfn << pagebits`, we translate that to
+   `pfn * (2 ** pagebits)` because each shift to the left
+   means _adding_ 0 bit to the right and _truncate_ the left-most bit.
+   When add 0 bit to the right, that means we are multiplying
+   the number by 2, so left shift means we are multiply the number
+   by 2 and `pagebits` here decide how many times we are shifting
+   to the left.
+   It's like how in decimal representation (base 10) we _add 0_
+   at the end of the number means we are multiply by 10, like
+   10 -> 100 means (10 * (10 ** 0)) -> (10 * (10 ** 1)).
+
+   References:
+   - https://processing.org/reference/leftshift.html
+   - https://math.stackexchange.com/q/1610667
+
+Q: Is left or right shift operation depends on the _order_ of how
+   the bytes stored (endian-ness)?
+A: No, when we calculate the result from left or right shift, the
+   value is still the same (left shift will multiply by 2, right shift
+   will divide by 2). And then when we are trying to read or store
+   the data in the memory, that's where the ordering of the bytes or
+   endian-ness used.
+
+   So regardless of endian-ness of the platform, the result of left or
+   right shift would be the same because the CPU knows how to _interpret_
+   the memory address based on the endian-ness of the platform. So
+   endian-ness matter when the CPU needs to read or write to the memory.
+
+   When talking about endian-ness, we are talking about "group of bytes"
+   and not individual bit. So endian-ness in here is how multi-bytes data
+   are arranged in memory, and there are 2 types of endian:
+   - Big endian:
+     _most_ significant byte on lower memory addresses,
+     _least_ significant byte on higher memory addresses.
+   - Little endian:
+     _least_ significant byte on lower memory addresses,
+     _most_ significant byte on higher memory addresses.
+
+   Example of left shifting in big and little endian,
+   assuming 1 byte = 8 bits and we have 2 bytes of data
+   (During the shifting, we can read little endian format like
+   big endian format. After the shifting, we can store the result
+   back using little endian format):
+   - Big endian:
+     00000000 00000001 << 8 -> 00000001 00000000
+   - Little endian:
+     00000001 00000000 << 8 -> 00000000 00000001
+
+   Let's say we have decimal number 123839023
+   (split that to `123 839 023` to make it easier to understand
+   because endian-ness is about the _grouping_ of the digits, not
+   the digit itself):
+   - The most significant part is `123`.
+   - The least significant part is `023`.
+
+   References:
+   - https://en.wikipedia.org/wiki/Bitwise_operation#Bit_addressing
+   - https://en.wikipedia.org/wiki/Endianness
+   - https://en.wikipedia.org/wiki/Bit_numbering#Most_significant_byte
+   - https://embeddedprep.com/little-endian-and-big-endian/
+   - https://betterexplained.com/articles/understanding-big-and-little-endian-byte-order/
+
+Q: What is most and least significant byte in endian byte order?
+A: The most significant byte is the largest representation,
+   and the least significant byte is the smallest representation.
+
+   For example, let's say we have this byte to store the data with exact order
+   (1 byte = 8 bits):
+   - W (0x12 or 00010010)
+   - X (0x34 or 00110100)
+
+   And the data is 2 bytes (short int), like this:
+   ```c
+   int main(void)
+   {
+      short w = 6942; // Most significant: 69 (in W), least significant: 42 (in X).
+      short *s = &w;
+      return 0;
+   }
+   ```
+
+   The representation of big endian and little endian is like this:
+   - Big endian (the first byte is the most significant):
+     (W << 8) + X
+     = (00010010 00000000) + (00000000 00110100) -> W shifting process on [1], X use sign extension.
+     = 00010010 00110100
+     = 0x1234 -> Representation in memory: 69, 42.
+   - Little endian (the first byte is the least significant):
+     W + (X << 8)
+     = (00000000 00010010) + (00110100 00000000) -> W use sign extension, X shifting process on [2].
+     = 00110100 00010010
+     = 0x3412 -> Representation in memory: 42, 69.
+
+   The big endian platform think that `s = 0x1234` and the little endian
+   platform think that `s = 0x3412`. The same data gives two different
+   addresses.
+
+   We can use bit masking and bit shifting to convert from big endian
+   byte order to little endian byte order or vice versa.
+
+   References:
+   - https://betterexplained.com/articles/understanding-big-and-little-endian-byte-order/
+   - https://stackoverflow.com/a/7184905
+
+   [1]
+   00010010 (original W)
+   00100100 << 1
+   01001000 << 2
+   10010000 << 3
+   00000001 00100000 << 4
+   00000010 01000000 << 5
+   00000100 10000000 << 6
+   00001001 00000000 << 7
+   00010010 00000000 << 8
+
+   [2]
+   00110100 (original X)
+   01101000 << 1
+   11010000 << 2
+   00000001 101000000 << 3
+   00000011 010000000 << 4
+   00000110 100000000 << 5
+   00001101 000000000 << 6
+   00011010 000000000 << 7
+   00110100 000000000 << 8
+
+Notes:
+AND (&) bitwise operation:
+- 1 & 1 = 1
+- 1 & 0 = 0
+- 0 & 1 = 0
+- 0 & 0 = 0
+
+Notes:
+OR (|) bitwise operation:
+- 1 | 1 = 1
+- 1 | 0 = 1
+- 0 | 1 = 1
+- 0 | 0 = 0
+
+Notes:
+Complement or NOT (~) bitwise operation is an unary operator that changes
+0 to 1 and 1 to 0. For example:
+1023 has binary digits 00001111111111, and ~1023 means the binary
+digits become 11110000000000. Reference:
+https://www.programiz.com/c-programming/bitwise-operators#complement
+
+Notes:
+XOR or exclusive OR (^) bitwise operation result in 1 if the
+corresponding bits of two operands are _opposite_. For example:
+- 1 ^ 1 = 0
+- 1 ^ 0 = 1
+- 0 ^ 1 = 1
+- 0 ^ 0 = 0
+The XOR bitwise operation can be used to toggle the bit.
+XOR or exclusive OR essentially means
+"one or the other but not both".
+References:
+- https://www.programiz.com/c-programming/bitwise-operators#xor
+- https://en.wikipedia.org/wiki/Bitwise_operation
+- https://en.wikipedia.org/wiki/Exclusive_or
+
+Q: Why do we need to use AND (&) bitwise operation between virtual
+   address and page mask (which is `page size - 1`) to get the offset
+   (from expression `offset = vaddr & pagemask`)?
+A: We can use AND (&) bitwise operation to remove the bits that we
+   don't want. In the expression `offset = vaddr & pagemask`, we are
+   removing the the first 4 bits from `vaddr` or virtual address and
+   only save the rest 10 bits (from 14 bits virtual address). Here's
+   the example calculation:
+   vaddr:    1010 1111000110 (11206) -> virtual address
+   pagemask: 0000 1111111111 (1023)
+   ------------------------- & -> the masking remove the left-most 4 bits (vpn bits)
+   offset:   0000 1111000110 (966)
+
+   Reference:
+   https://stackoverflow.com/q/10493411
+
+Q: Why do we need to use right shift after doing bit masking with
+   AND (&) bitwise operation for the virtual page number (from the
+   expression `vpn = (vaddr & vpnmask) >> pagebits`)?
+A: First we keep the left-most 4 bits from `vaddr` or virtual address
+   and remove the rest 10 bits (from 14 bits virtual address) with
+   the masking expression `vaddr & vpnmask` like this:
+   vaddr:   1010 1111000110 (11206) -> virtual address
+   vpnmask: 1111 0000000000 (-1024)
+   ------------------------ & -> the masking removing 10 bits (offset)
+   bvp:     1010 0000000000 (10240) -> bvp stands for "base virtual page"
+   vpn:     1010 0000000000 (10240) >> 10 (pagebits) -> 0000000000 1010 (10)
+
+   We are using masking to get the base address of the virtual page
+   (called "base virtual page"), in this case it's 10240. And then,
+   to get which virtual page number (or index) this virtual page resides
+   in page table, we are using right shift to get the virtual page number
+   bits (?).
+
+Q: Why do we need to left shift the page frame number with
+   page bits (from expression `pfn << pagebits`)?
+A: Every page frame in physical memory and also virtual page in virtual
+   address space has the size of page size and have the range of
+   `0 - (page size - 1)`, so the starting address for each page is
+   `page number * page size` (either in physical memory or virtual
+   address space). `pagebits` in here means the exponent for 2, something
+   like `2 ** pagebits` (2 power `pagebits`). And Left shift by page size
+   bits (or `pagebits`) like `pfn << pagebits` is equivalent to
+   `pfn * (2 ** pagebits)`, and `2 ** pagebits` is equivalent to
+   `pagesize`. So `pfn << pagebits` is equivalent to `pfn * pagesize`.
+   With that in mind, we need to left shift the page frame number to
+   get the starting or base address of the page frame in physical memory.
+
+Q: Why do we need to use OR (|) bitwise operation after left shift
+   page frame number with page bits (from expression
+   `(pfn << pagebits) | offset`)?
+A: After we got the base address for the page frame number (pfn) with
+   left shift `pfn << pagebits`, we add the offset using OR (|) bitwise
+   operation like this:
+   base address: 0100110000000000 (19456)
+   offset:       0000001111000110 (966)
+   ------------------------------ | -> like `19456 + 966` as long as `19456 & 966 = 0`
+   paddr:        0100111111000110 (20422) -> physical address
+
+Notes:
+Inside of bits (binary digits), we can store a lot of information in it
+and get the information based on the interpretation for those bits.
+For example, if we have 4 bits `1011`, we can get this kind of
+informations:
+- decimal info: 11
+- 2 left most bits (10 in 1011) info: 2
+- 2 right most bits (11 in 1011) info: 3
+- boolean info: TFTT -> True (1) False (0) True (1) True (1)
+
+Q: Why use OR bitwise operation?
+A: We can combine multiple flags into one byte using OR bitwise
+   operation. For example, in unix file permission we have flags
+   like `644` and `777` (permission for owner, group, and everyone).
+   `4`(bits `100`) is flag for read, `2` (bits `010`) is flag for
+   write, and `1` (bits `001`) is flag for executable. If all the flags
+   is on we have bits `111` which is `7` in decimal. So we can check if
+   the flags is on or not by using OR bitwise operation. For example,
+   let's say the file permission is `644`, we got something like this:
+   - owner:    `6` -> `4 | 2` -> 110 (read = 1, write = 1, executable = 0)
+   - group:    `4` -> 100 (read = 1, write = 0, executable = 0)
+   - everyone: `4` -> 100 (read = 1, write = 0, executable = 0)
+
+   Reference:
+   https://www.alexhyett.com/bitwise-operators/
+
+Q: Why the page mask is `pagesize - 1`?
+A: Because the maximum value that can be hold within the page size bits is
+   `pagesize - 1` (?). The bits range start from 0 until `pagesize - 1`.
+   So, to remove virtual page number bits from virtual address, we can use
+   this maximum value of the page size as the page mask.
+
+Q: Why virtual page number mask use `0xFFFFFFFF & ~pagemask`?
+A: `0xFFFFFFFF` is the maximum value of unsigned integer, and we use complement
+   for `pagemask` to flip the `pagemask` bits (0 become 1, and 1 become 0) and
+   use that complement `pagemask` as the mask to get the virtual page number bits.
+   The complement `pagemask` act as a filter to remove the offset bits. And new
+   question arise, "If we use complement `pagemask` to remove the offset bits,
+   why do we need `0xFFFFFFFF` in the first place?".
+
+Simulation representation:
+VA 14726: vpn 14 -> invalid
+VA 11206: vpn 10 -> pfn 19 -> offset 966 -> bfa* 19456 (19 << 10) -> bfa | offset -> 20422
+VA 7735: vpn 7 -> invalid
+VA 1649: vpn 1 -> invalid
+VA 7113: vpn 6 -> invalid
+
+*bfa stands for "base frame address" which is the base address
+of the page frame number (pfn). So with `bfa | offset`, we are
+adding the offset bits into the base address of the page frame
+number (pfn) bits.
