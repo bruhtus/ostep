@@ -43,3 +43,10 @@ Chapter 17:
      "address space size - (code segment + stack segment)"?
 - Q: If we have only have N size of free chunk, not N size + header size,
      do we take that free chunk or return NULL?
+
+Chapter 18:
+- Q: If we have 2 process, does that mean we have 2 page tables?
+- A: Yes, page table is a per process data structure. So if there are multiple
+     processes, the operating system need to manage multiple page tables because
+     each process' virtual pages mapped to different physical pages.
+- Q: Is operating system has its own address space?
