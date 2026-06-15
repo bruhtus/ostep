@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "measurement.h"
+#include "../libs-local/measurement.h"
 
 #define ARRAY_LEN(array) (sizeof(array) / sizeof(*array))
 
