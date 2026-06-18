@@ -50,3 +50,32 @@ Chapter 18:
      processes, the operating system need to manage multiple page tables because
      each process' virtual pages mapped to different physical pages.
 - Q: Is operating system has its own address space?
+
+Chapter 19:
+- Q: What happen if the translation address in TLB (Translation Lookaside
+     Buffer) is out of date?
+- Q: What is the policy to decide which memory translation stay or removed in
+     TLB?
+  A: One common approach is Least Recently Used (LRU) policy, which remove
+     TLB entry that are not used recently.
+     Another approach is to randomly remove TLB entry (the Random policy).
+- Q: What is spatial locality?
+  A: Spatial locality is the assumption that if a program accessed memory at
+     address `n`, the program will likely access memory near address `n` later
+     on. Think of accessing an array, after accessing one element, we might
+     access the next element too.
+- Q: What is temporal locality?
+  A: Temporal locality is the assumption that an instruction or data item that
+     has been recently accessed will likely be re-accessed later on. Think of
+     loop variables or instructions in a loop, they are accessed repeatedly
+     over time.
+- Q: What is the lifetime of TLB entries (until the TLB entry become invalid)?
+- Q: What is fully associative in TLB means
+     (from "TLB Contents: What's In There?" section)?
+- A: Fully associative in TLB means that any given translation can be anywhere
+     in the TLB, and the hardware will search the entire TLB in parallel to
+     find the desired translation.
+- Q: How to manage TLB contents when switching between processes?
+  A: Some hardware systems provide an Address Space Identifier (ASID) in
+     the TLB, so we can use ASID as the identifier to get the translation from
+     TLB for specific process.
