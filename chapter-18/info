@@ -19,7 +19,7 @@ When P=0 (present bit is false), there are 2 possible conditions:
 - The virtual page number does not exist in page table (invalid).
 
 The 2 problems with paging:
-- page table might be too big.
+- page table might be too big (and might need too much memory).
 - using page table might be too slow (because extra memory reference).
 
 base address + (array index * sizeof(int))
