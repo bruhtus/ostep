@@ -1,0 +1,15 @@
+PTE: Page Table Entry
+PTBR: Page Table Base Register
+
+CISC: Complex Instruction Set Computer -> easy to use?
+RISC: Reduced Instruction Set Computer -> simple instruction?
+
+TLB: Translation Lookaside Buffer
+
+TLB valid bit: Refers to whether the TLB entry has a valid translation within
+               it, which is different from page table valid bit. By default,
+               the TLB entry is set to invalid.
+
+Exceeding the TLB coverage means that the number of pages that a program
+accesses in short period of time exceeds the number of pages that fit into TLB,
+and the program will generate a lot of TLB misses and will be a bit slower.
