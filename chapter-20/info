@@ -1,0 +1,223 @@
+Notes:
+Let's say we have 32-bit address space (2 ** 32) and page size with
+4 KB (2 ** 12), and then the page table entry size is 4 byte. The size of
+page table is the total of virtual pages in the page table multiply by
+the page table entry size, like this:
+((2 ** 32) / (2 ** 12)) * 4 = 4194304 (4 MB)
+
+Notes:
+If we increase the page size in previous example from 4 KB to 16 KB (4096 * 4),
+we will reduce the page table size in previous example from 4 MB to 1 MB:
+((2 ** 32) / (2 ** 14)) * 4 = 1048576 (1 MB)
+
+Virtual Page Number (VPN) or Page Frame Number (PFN) is the page table
+index.
+
+Page Table Entry (PTE) is the bits information that reside
+inside the VPN or PFN.
+
+VPN or PFN is one page and inside those page we have PTE. And how many
+PTE we have in one page depends on the page size (?).
+
+Let's say we have address space size 16384 and page size 1024.
+With that settings, we have 16 pages (VPN or PFN) with each page
+contains 1024 entries (PTE).
+
+PDBR: Page Directory Base Register
+
+Page directory:
+Store only page table index (VPN or PFN) that has at least one valid
+address.
+
+Notes:
+Unlike linear page table where we have one big page table with page table
+entry (PTE) inside of it, in multi-level page table, we treat each page
+table index as its own page table and store the page table index that has
+at least one valid address in the page directory. With this approach, we
+don't need to have contiguous memory to store the page table.
+
+Notes:
+PTE size is the size of bits information for each PTE, which we need to
+save in order to get the needed address, validness of the address,
+permission of the address, and so on.
+
+total pages (VPN or PFN): address space size / page size
+
+linear page table size: total pages * PTE size
+
+total 2-level page directory entry (PDE): linear page table size / page size
+
+total 2-level PTE (inside each PDE): total pages / total 2-level PDE
+
+Q: What is "the page of page table"?
+A: Let's say we have one big page table (or linear page table), and
+   inside those page table, we have a bunch of pages. "The page of page
+   table" in this case is one of the page from those big page table (?).
+
+We can treat "the page of page table" as the "small page table" when
+talking about 2-level page table because each page is its own page table,
+with the index and offset.
+
+Each page directory is an array of entries (PDE), thus all we need to
+figure out is how to construct the index for each page directory
+from pieces of the VPN.
+
+With 16 KB (2 ** 14) address space size, 64 bytes (2 ** 6) page size,
+and 4 bytes PTE size:
+- The linear page table have 256 (2 ** 8) pages with page table size
+  1024 (256 (pages) * 4 (PTE size)).
+- The 2-level page table have 16 (1024 (linear page table size) / 64 (page size))
+  small page table with each small page table can hold
+  16 (256 (total linear PTE) / 16 (total small page table)) PTE.
+
+With 16 KB address space, 64 bytes page size, and 4 bytes PTE size,
+we have 256 pages spread across 16 small page tables and each small page table
+have 16 entries (PTE).
+
+The general approach of how to get the actual page address with 2-level page table:
+- `PDE << page_size_bits`
+  -> To get the address for small page table
+- `(PDE << page_size_bits) | (small_page_table_index << pte_size_bits)`
+  -> To get the small page table base address
+- `(PDE << page_size_bits) | (small_page_table_index << pte_size_bits) | offset`
+  -> To get the actual memory address
+
+We divide the VPN from linear page table into page directory index (PDI) and
+page table index (PTI), so the page 0 in page directory with 16 PTE is the
+first 16 VPN in linear page table.
+
+The representation of 2-level page table with 16 KB address space size
+and 64 bytes page size:
+Page Directory Index (PDI): Page Table Index (PTI): Offset
+0:                          0 - 15:                 0 - 63
+1:                          16 - 31:                64 - 127
+
+For example, in Figure 20.3 we will have something like this:
+201 (PDI) + 13 (PTI) + 2 (Offset)
+
+If the page directory entry (PDE) is valid, one of the things to do is to fetch
+the entry (PTE) from the page of page table that PDE points to.
+
+To sum up the translation process in 2-level page table:
+- Get the page of page table address (from page directory).
+- Get the PTE address (from page of page table).
+- Get the PFN base address (from PTE information).
+- Get the physical address (PFN base address + offset).
+
+Notes:
+To determine how many levels are needed in a multi-level table to make all pages
+of the linear page table fit within a single page, we start by determining how
+many page table entry (PTE) that can fit into one page.
+
+Notes:
+The goal is to make every pieces of multi-level page table fit into one page.
+
+For example, if we have 512 byte page size and 4 bytes PTE, we can fit 128 PTE
+on a one page with 512 byte size (512 / 4).
+
+Q: "If our page directory has 16384 (2 ** 14) entries (and 4-byte PDEs), it
+   spans not one page but 128", assuming one page have 512 byte size, how do
+   we get the 128 as a result?
+A: We got the page directory size by multiply the total page directory
+   entries (16384) with the page directory entry size (4 byte) like
+   `16384 * 4 = 65536`, but then the page directory size (65536) can not fit
+   into one page (512 byte). So we need more than one page to store the page
+   directory (65536 / 512 = 128).
+
+Simulation representation:
+PDE_MASK: 0x7c00
+PDE_SHIFT: 10
+PTE_MASK: 0x03e0
+PTE_SHIFT: 5
+VPN_MASK: PDE_MASK | PTE_MASK
+VPN_SHIFT: PTE_SHIFT
+OFFSET_MASK: 0x1f
+VALID_MASK: 0x80
+VALID_SHIFT: 7
+PFN_MASK = 0x7f
+PAGE_BITS = 5
+
+Q: Is the value in here the actual value (like integer
+   value 69, 42, etc) or address value?
+A: Maybe it's the address value, which means we need to
+   access those address to get the actual value (?).
+
+[With random seed 0]
+PDBR: page 108
+
+  page 108:
+  83(0) fe(1) e0(2) da(3) 7f(4) d4(5) 7f(6) eb(7) be(8) 9e(9) d5(10) ad(11) e4(12) ac(13) 90(14) d6(15) 92(16) d8(17) c1(18) f8(19) 9f(20) e1(21) ed(22) e9(23) a1(24) e8(25) c7(26) c2(27) a9(28) d1(29) db(30) ff(31)
+
+VA 0x611c:
+- Page Directory: ((0x611c & PDE_MASK) >> PDE_SHIFT) -> index 24 -> PDE address 0xa1 (161) -> ((0xa1 & VALID_MASK) >> VALID_SHIFT)
+  -> valid -> (0xa1 & PFN_MASK) -> page 33 (PDE)
+- PDE: page 33 -> ((0x3da8 & PTE_MASK) >> PTE_SHIFT) -> index 8 -> PTE address 0xb5 -> ((0xa1 & VALID_MASK) >> VALID_SHIFT)
+  -> valid -> (0xb5 & PFN_MASK) -> page 53 (PTE)
+- PTE: page 53 -> (0x611c & OFFSET_MASK) -> offset 28 -> ((page 53 << PAGE_BITS) | offset 28) -> physical address 1724 -> value address 0x08
+
+  page 33:
+  7f(0) 7f(1) 7f(2) 7f(3) 7f(4) 7f(5) 7f(6) 7f(7) b5(8) 7f 9d 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f f6 b1 7f 7f 7f 7f
+
+  page 53:
+  0f 0c 18 09 0e 12 1c 0f 08 17 13 07 1c 1e 19 1b 09 16 1b 15 0e 03 0d 12 1c 1d 0e 1a 08 18 11 00
+
+VA 0x3da8:
+- Page Directory: ((0x3da8 & PDE_MASK) >> PDE_SHIFT) -> index 15 -> PDE address 0xd6 (214) -> ((0xd6 & VALID_MASK) >> VALID_SHIFT)
+  -> valid -> (0xd6 & PFN_MASK) -> page 86 (PDE)
+- PDE: page 86 -> ((0x3da8 & PTE_MASK) >> PTE_SHIFT) -> index 13 -> PTE address 0x7f -> ((0x7f & VALID_MASK) >> VALID_SHIFT)
+  -> invalid (PTE)
+
+  page 86:
+  7f(0) 7f(1) 7f(2) 7f(3) 7f(4) 7f(5) 7f(6) c5(7) 7f(8) 7f(9) 7f(10) 7f(11) 7f(12) 7f(13) 7f 7f 7f 7f 7f 7f ca 7f 7f ee 7f 7f 7f 7f 7f 7f 7f 7f
+
+VA 0x17f5:
+- Page Directory: ((0x17f5 & PDE_MASK) >> PDE_SHIFT) -> index 5 -> PDE address 0xd4 (212) -> ((0xd4 & VALID_MASK) >> VALID_SHIFT)
+  -> valid -> (0xd4 & PFN_MASK) -> page 84 (PDE)
+- PDE: page 84 -> ((0x17f5 & PTE_MASK) >> PTE_SHIFT) -> index 31 -> PTE address 0xce -> ((0xce & VALID_MASK) >> VALID_SHIFT)
+  -> valid -> (0xce & PFN_MASK) -> page 78 (PTE)
+- PTE: page 78 -> (0x17f5 & OFFSET_MASK) -> offset 21 -> ((page 78 << PAGE_BITS) | offset 21) -> physical address 2517 -> value address 0x1c
+
+  page  84:
+  7f(0) 7f(1) 7f(2) 7f(3) 7f(4) 7f(5) 7f(6) 7f(7) 7f(8) 7f(9) 7f(10) 7f(11) 7f(12) 7f(13) 7f(14) 7f(15) 7f(16) 7f(17) 7f(18) 7f(19) 7f(20) 7f(21) 7f(22) 7f(23) 7f(24) 94(25) 7f(26) 7f(27) 7f(28) 7f(29) 7f(30) ce(31)
+
+  page  78:
+  0e 02 17 1b 1c 1a 1b 1c 10 0c 15 08 19 1a 1b 12 1d 11 0d 14 1e 1c(21) 18 02 12 0f 13 1a 07 16 03 06
+
+[With random seed 1]
+PDBR: page 17
+
+page  17:
+da(0) f7(1) f2(2) a8(3) 96(4) c5(5) 9d(6) 94(7) c8(8) b9(9) 7f(10) c4(11) 98(12) e5(13) 7f(14) 7f(15) d3(16) a1(17) 82(18) 8f(19) a6(20) fb(21) bf(22) f0(23) 7f(24) 84(25) d2(26) a0(27) 88(28) 80(29) c9(30) 92(31)
+
+page  32:
+7f(0) 7f(1) 7f(2) e1(3) 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f db 7f 7f 7f
+
+page 97:
+0f 0d 14 18 02 00 19 0d 17 00 0d 16 07 1d 1b 00 00 10 1d 0b 06(20) 0d 00 06 0d 0f 07 07 06 0e 08 00
+
+page  82:
+7f 7f 7f 7f 7f 7f 7f c6 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f c7(25) 7f 7f df d1 7f 7f
+
+page  71:
+05 1e 1a(2) 03 0a 16 16 1d 0d 19 14 09 12 1b 1a 0f 12 01 07 18 0c 05 11 15 14 0b 0d 0f 18 10 0c 0f
+
+page  90:
+7f 7f 7f b1 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 85(30) 7f
+
+page   5:
+1e 12 0c 05 0f 1e 17 10 1a 07 0f 1d 11 0e 08 10 1d 00 18 19 1b 16 19 10 11 0d 01 1a 11 06 0f 0f(31)
+
+VA 0x6c74:
+- Page Directory: index 27 -> PDE address 0xa0 -> valid -> page 32 (PDE)
+- PDE: page 32 -> index 3 -> PTE address 0xe1 -> valid -> page 97 (PTE)
+- PTE: page 97 -> offset 20 -> physical address 3124 -> value address 0x06
+
+VA 0x6b22:
+- Page Directory: index 26 -> PDE address 0xd2 -> valid -> page 82 (PDE)
+- PDE: page 82 -> index 25 -> PTE address 0xc7 -> valid -> page 71 (PTE)
+- PTE: page 71 -> offset 2 -> physical address 2274 -> value address 0x1a
+
+VA 0x03df:
+- Page Directory: index 0 -> PDE address 0xda -> valid -> page 90 (PDE)
+- PDE: page 90 -> index 30 -> PTE address 0x85 -> valid -> page 5 (PTE)
+- PTE: page 5 -> offset 31 -> physical address 191 -> value address 0x0f
