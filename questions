@@ -79,3 +79,31 @@ Chapter 19:
   A: Some hardware systems provide an Address Space Identifier (ASID) in
      the TLB, so we can use ASID as the identifier to get the translation from
      TLB for specific process.
+
+Chapter 20:
+- Q: If linear page table need 1 register to locate the page table (assuming we
+     have TLB miss), how many registers we need to locate the page table in
+     2-level or 3-level page table?
+- A: We only need 1 register regardless of the level of page table. We store the
+     highest level of page table reference in the register and fetch the highest
+     level page table entry from RAM to get the next level page table reference.
+     We keep fetching the page table entry until we got the physical address and
+     fetch the data from those physical address.
+     References:
+     - https://stackoverflow.com/a/66626310
+     - https://stackoverflow.com/a/66453599
+- Q: Do we keep changing the content of register when going through the
+     multi-level page table entry?
+- Q: How many memory references are needed to perform each lookup in a 2-level
+     page table from simulation?
+- A: There are 3 memory references needed to perform in each lookup. 1 memory
+     reference for the PDE (highest PTE) address, 1 memory reference for the
+     PTE (middle PTE) address, and 1 memory reference for the data in physical
+     memory address (?).
+- Q: How do you think the memory reference to the page table will behave in the
+     cache? Will they lead to lots of cache hits or misses?
+- A: It depends on the memory that we need to access. If we constantly access
+     the memory from the same page entry (either PDE or PTE), we might have more
+     cache hits (because of spatial locality). But if we need to constantly
+     access the memory from different page entry, we might have more cache
+     misses (?).
