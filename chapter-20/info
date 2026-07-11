@@ -139,8 +139,11 @@ PAGE_BITS = 5
 
 Q: Is the value in here the actual value (like integer
    value 69, 42, etc) or address value?
-A: Maybe it's the address value, which means we need to
-   access those address to get the actual value (?).
+A: Maybe it's the actual value in hexadecimal number (?).
+   From this article:
+   https://walac.github.io/kernel-crashes/
+   It looks like some of the hexadecimal value might be
+   the actual value, not necessarily an address value (?).
 
 [With random seed 0]
 PDBR: page 108
@@ -153,7 +156,7 @@ VA 0x611c:
   -> valid -> (0xa1 & PFN_MASK) -> page 33 (PDE)
 - PDE: page 33 -> ((0x3da8 & PTE_MASK) >> PTE_SHIFT) -> index 8 -> PTE address 0xb5 -> ((0xa1 & VALID_MASK) >> VALID_SHIFT)
   -> valid -> (0xb5 & PFN_MASK) -> page 53 (PTE)
-- PTE: page 53 -> (0x611c & OFFSET_MASK) -> offset 28 -> ((page 53 << PAGE_BITS) | offset 28) -> physical address 1724 -> value address 0x08
+- PTE: page 53 -> (0x611c & OFFSET_MASK) -> offset 28 -> ((page 53 << PAGE_BITS) | offset 28) -> physical address 1724 -> value 0x08
 
   page 33:
   7f(0) 7f(1) 7f(2) 7f(3) 7f(4) 7f(5) 7f(6) 7f(7) b5(8) 7f 9d 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f 7f f6 b1 7f 7f 7f 7f
@@ -175,7 +178,7 @@ VA 0x17f5:
   -> valid -> (0xd4 & PFN_MASK) -> page 84 (PDE)
 - PDE: page 84 -> ((0x17f5 & PTE_MASK) >> PTE_SHIFT) -> index 31 -> PTE address 0xce -> ((0xce & VALID_MASK) >> VALID_SHIFT)
   -> valid -> (0xce & PFN_MASK) -> page 78 (PTE)
-- PTE: page 78 -> (0x17f5 & OFFSET_MASK) -> offset 21 -> ((page 78 << PAGE_BITS) | offset 21) -> physical address 2517 -> value address 0x1c
+- PTE: page 78 -> (0x17f5 & OFFSET_MASK) -> offset 21 -> ((page 78 << PAGE_BITS) | offset 21) -> physical address 2517 -> value 0x1c
 
   page  84:
   7f(0) 7f(1) 7f(2) 7f(3) 7f(4) 7f(5) 7f(6) 7f(7) 7f(8) 7f(9) 7f(10) 7f(11) 7f(12) 7f(13) 7f(14) 7f(15) 7f(16) 7f(17) 7f(18) 7f(19) 7f(20) 7f(21) 7f(22) 7f(23) 7f(24) 94(25) 7f(26) 7f(27) 7f(28) 7f(29) 7f(30) ce(31)
@@ -210,14 +213,14 @@ page   5:
 VA 0x6c74:
 - Page Directory: index 27 -> PDE address 0xa0 -> valid -> page 32 (PDE)
 - PDE: page 32 -> index 3 -> PTE address 0xe1 -> valid -> page 97 (PTE)
-- PTE: page 97 -> offset 20 -> physical address 3124 -> value address 0x06
+- PTE: page 97 -> offset 20 -> physical address 3124 -> value 0x06
 
 VA 0x6b22:
 - Page Directory: index 26 -> PDE address 0xd2 -> valid -> page 82 (PDE)
 - PDE: page 82 -> index 25 -> PTE address 0xc7 -> valid -> page 71 (PTE)
-- PTE: page 71 -> offset 2 -> physical address 2274 -> value address 0x1a
+- PTE: page 71 -> offset 2 -> physical address 2274 -> value 0x1a
 
 VA 0x03df:
 - Page Directory: index 0 -> PDE address 0xda -> valid -> page 90 (PDE)
 - PDE: page 90 -> index 30 -> PTE address 0x85 -> valid -> page 5 (PTE)
-- PTE: page 5 -> offset 31 -> physical address 191 -> value address 0x0f
+- PTE: page 5 -> offset 31 -> physical address 191 -> value 0x0f
