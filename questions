@@ -107,3 +107,41 @@ Chapter 20:
      cache hits (because of spatial locality). But if we need to constantly
      access the memory from different page entry, we might have more cache
      misses (?).
+
+Chapter 21:
+Q: Do we immediately put the unused pages from the address space in swap space
+   or waiting until the physical memory to be full to use swap space?
+Q: How do we determine if the page is allocated but not present in memory or
+   the page is not allocated at all (segmentation fault)?
+A: We check if the page is allocated or not from the page table entry (PTE),
+   and if it has page frame number (PFN), it means that the page is allocated
+   (either in memory or disk). That means PFN can hold the memory address or
+   disk address (when using swap space), and can be used as indicator whether
+   the page is allocated or not.
+Q: What happen when we don't have swap space when the page replacement policy
+   occurs to make space in memory for new process?
+Q: What is the origin of the term daemon in computing?
+A: The term daemon was inspired by the Maxwell's daemon of physics and
+   thermodynamics. Maxwell's daemon was an imaginary agent which helped sort
+   molecules of different speeds and worked in the background. The term daemon
+   used to describe background processes which worked to perform system chores.
+Q: What is the difference between idle memory and inactive memory in `vmstat -a`
+   report?
+A: The idle (or free) memory is the memory that's not being used, but the
+   inactive memory is the memory that's still allocated but have not been
+   used recently. Maybe the example of inactive memory is the stack memory
+   that we allocated previously but have not been used recently, so we can
+   claim that memory when we need more some memory (?). And it looks like
+   "active memory" in `vmstat -a` does not mean the memory in used, it means
+   the memory is "recently accessed" and might be needed later on (like
+   heap memory which is not in use but have not been freed yet).
+   Reference:
+   https://linuxvox.com/blog/what-is-active-memory-and-inactive-memory/
+Q: What is the difference between MemFree and MemAvailable in /proc/meminfo?
+A: MemFree is the amount of physical RAM left unused by the system (?).
+   MemAvailable is an estimate of how much memory is available for starting
+   new applications without swapping. The estimate in MemAvailable takes into
+   account that the system needs some page cache to perform well.
+   References:
+   - https://superuser.com/a/980821
+   - https://stackoverflow.com/a/71256266
