@@ -1,0 +1,21 @@
+We can use `vmstat` to check the virtual memory statistics.
+
+In ostep-homework, there's a C program called `mem.c` that we need to compile
+into `mem` executable to measure the virtual memory usage.
+
+Let's say we have swap space and 16 GB of memory with 15 GB available memory,
+and then we use `mem 8000` (basically allocate 8000 MB or 8 GB of data). In that
+scenario, the loop 0 will take longer time (1413.24 ms, bandwidth: 5660.77 MB/s)
+than the loop 1 (944.62 ms, bandwidth: 8469.01 MB/s), and so on. And also we
+didn't use any swap space.
+
+Let's say we have swap space and 16 GB of memory with 15 GB available memory,
+and then we use `mem 16000` (basically allocate 16000 MB or 16 GB of data, more
+than the available memory). In that scenario, the loop 0 will take less time
+(4253.66 ms, bandwidth: 3761.47 MB/s) than loop 1
+(23816.21 ms, bandwidth: 671.81 MB/s), and so on. And also we use the swap space
+around 10 GB (according to `grep SwapCached /proc/meminfo`). Still not sure why
+we use that much swap space when we have 15 GB available memory, possibly because
+the `MemAvailable` from `/proc/meminfo` is not enough to store the data (?).
+This is also the first time I see `MemAvailable` (40776 kB) is less than
+`MemFree` (129532 kB), which is interesting.
