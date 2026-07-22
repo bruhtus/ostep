@@ -145,3 +145,21 @@ Chapter 21:
      References:
      - https://superuser.com/a/980821
      - https://stackoverflow.com/a/71256266
+
+Chapter 22:
+- Q: Why modified (or dirty) page is expensive to evict to disk compared to
+     non-modified (or clean) page?
+- Q: What does it means by "the memory is oversubscribed"?
+  A: Maybe that means the memory is actively filled up to the point that the
+     active virtual memory is more than the physical memory (?). Maybe we can
+     think of "oversubscribed" here as "overload".
+- Q: What is "constantly paging" or thrashing means?
+  A: Maybe thrashing means we are constantly filling up the page (?). Or maybe
+     constantly changing the content of the page (?).
+- Q: What is considered a memory-intensive process?
+  A: Maybe the process that use a lot of memory (?).
+- Q: Why the stack property might be useful for simulating a lot of different
+     sized caches at once? (read "Evaluation Techniques for Storage Hierarchies"
+     paper)
+- Q: How does the more clock bits means the better the clock algorithm policy
+     at determining which pages to keep in memory? (from simulation readme)
