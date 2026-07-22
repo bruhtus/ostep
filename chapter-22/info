@@ -1,0 +1,85 @@
+Computer architects sometimes find it useful to characterize cache misses
+by type. There are 3 types of cache misses:
+- Compulsory (or cold-start) miss:
+  The cache is empty and this is the first reference to the item.
+- Capacity miss:
+  The cache run out of space and had to take out an item from the cache
+  to bring a new item into the cache.
+- Conflict miss:
+  The miss happen because the item can not be placed in the cache by some
+  limitation known as "set-associativity" (?).
+
+Belady's Anomaly (with First In First Out policy):
+- Cache size 3:
+  1 -> miss -> 1
+  2 -> miss -> 1,2
+  3 -> miss -> 1,2,3
+  4 -> miss -> 2,3,4
+  1 -> miss -> 3,4,1
+  2 -> miss -> 4,1,2
+  5 -> miss -> 1,2,5
+  1 -> hit -> 1,2,5
+  2 -> hit -> 1,2,5
+  3 -> miss -> 2,5,3
+  4 -> miss -> 5,3,4
+  5 -> hit -> 5,3,4
+
+- Cache size 4:
+  1 -> miss -> 1
+  2 -> miss -> 1,2
+  3 -> miss -> 1,2,3
+  4 -> miss -> 1,2,3,4
+  1 -> hit -> 1,2,3,4
+  2 -> hit -> 1,2,3,4
+  5 -> miss -> 2,3,4,5
+  1 -> miss -> 3,4,5,1
+  2 -> miss -> 4,5,1,2
+  3 -> miss -> 5,1,2,3
+  4 -> miss -> 1,2,3,4
+  5 -> miss -> 2,3,4,5
+
+Discussed policies:
+- FIFO (First In First Out)
+- Random
+- LFU (Least Frequently Used)
+- LRU (Least Recently Used)
+
+From simulation:
+Worst-case page access scenario for FIFO policy with 5 cache size
+(page access sequence 0,1,2,3,4,5,0,1,2,3):
+- 0
+- 0,1
+- 0,1,2
+- 0,1,2,3
+- 0,1,2,3,4
+- 1,2,3,4,5
+- 2,3,4,5,0
+- 3,4,5,0,1
+- 4,5,0,1,2
+- 5,0,1,2,3
+
+Worst-case page access scenario for LRU policy with 5 cache size
+(page access sequence 0,1,2,3,4,5,0,1,2,3):
+- 0
+- 0,1
+- 0,1,2
+- 0,1,2,3
+- 0,1,2,3,4
+- 1,2,3,4,5
+- 2,3,4,5,0
+- 3,4,5,0,1
+- 4,5,0,1,2
+- 5,0,1,2,3
+
+Worst-case page access scenario for MRU policy with 5 cache size
+(page access sequence 0,1,2,3,4,5,4,5,4,5):
+- 0
+- 0,1
+- 0,1,2
+- 0,1,2,3
+- 0,1,2,3,4
+- 0,1,2,3,5
+- 0,1,2,3,4
+- 0,1,2,3,5
+- 0,1,2,3,4
+- 0,1,2,3,5
