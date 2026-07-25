@@ -163,3 +163,22 @@ Chapter 22:
      paper)
 - Q: How does the more clock bits means the better the clock algorithm policy
      at determining which pages to keep in memory? (from simulation readme)
+
+Chapter 23:
+- Q: Why placing user application page tables in kernel virtual address space
+     can reduces memory pressure? (from section 23.1)
+  A: Placing user application page tables makes moving the data between kernel
+     and user application easier because the data is in one address space. For
+     example, when the user application request write() system call, it's easy
+     to copy data from user application into kernel's owned data structure on
+     context switch without worry where the data it is accessing comes from (?).
+     With this construction, the kernel appears almost as a protected "library"
+     to the applications because the kernel address space is a part of each
+     application's address space (check figure 23.1).
+- Q: Why making page zero inaccessible provides some form of support for
+     debugging in VAX/VMS operating system?
+  A: Maybe it's because page zero used as a null address (?). So when we have
+     a segmentation fault error, we can check whether the address in the pointer
+     is null or not during debugging process. And if it's null or 0 (from
+     page 0), that information might help in debugging the cause of error (?).
+- Q: What is memory mapped files?
