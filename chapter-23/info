@@ -1,0 +1,269 @@
+VAX/VMS Virtual Memory
+  - 32-bit address space with 512 bytes page size:
+    - System space (upper-half):
+      - Usually only used half of it (?).
+      - Protected operating system code and data reside
+        in system space, and those code and data shared
+        across processes.
+    - Process space (lower-half):
+      - P0: Where the user program memory (including heap).
+      - P1: Where the stack memory.
+
+  - One major concern of the VAX/VMS operating system is that the page size
+    is too small (512 bytes), making the simple linear page table too large.
+    Thus, one of the first goal of the VAX/VMS operating system designers was
+    to ensure that VAX/VMS operating system would not "overwhelm" memory with
+    page tables.
+
+  - VAX/VMS memory management system reduced the pressure of
+    page tables on memory in 2 ways:
+    - Segmenting the user address space (or process space) into 2 regions
+      (P0 and P1). VAX-11 machine provides a page table for each of these
+      regions per process. Thus, no page table space is needed for the unused
+      portion of the address space _between_ stack and heap.
+    - The operating system reduces memory pressure even further by placing user
+      page tables (P0 and P1, 2 page tables per process) in kernel virtual
+      address space. Thus, when allocating or growing the user page tables, the
+      kernel allocates space out of its own virtual address space in system
+      space segment.
+
+  - Page table entry (PTE) in VAX/VMS operating system contains:
+    - A valid bit.
+    - A protection bits (4 bits).
+    - A modified (or dirty) bit.
+    - A bits reserved for operating system use (5 bits).
+    - A physical frame number (PFN).
+
+  - Segmented FIFO (page replacement policy in VAX/VMS operating system):
+    - Each process has a maximum number of pages it can keep in memory, known as
+      "Resident Set Size" (RSS). Each of these pages is kept on a FIFO (First In
+      First Out) list, and when a process exceeds its RSS, the "first-in" page
+      is taken out.
+    - To improve the FIFO's performance, VAX/VMS operating system introduced two
+      second-chance list where pages are placed before getting evicted or taken
+      out from memory, specifically a global "clean-page list" and
+      "dirty page list". When a process exceeds its RSS, a page is removed
+      from the FIFO list (the main memory list). And if those page is not
+      modified (a.k.a clean), it is placed on the end of the "clean-page list",
+      and if those page is modified or having some data in it (a.k.a dirty), it
+      is placed on the end of the "dirty-page list".
+    - If another process need a free page, that process can take the first free
+      page from the global "clean-page list". However, if the previous
+      process need those page before it is reclaimed by another process, the
+      previous process can reclaim it from the "clean-page list" or
+      "dirty-page list" and avoid disk access because of swapping the memory to
+      disk.
+    - The bigger these global second-chance list is, the closer the segmented
+      FIFO policy perform to LRU (Least Recently Used) policy.
+
+  - Swapping large batches of pages to disk:
+    - Because disk I/O is slow, swapping those small page to disk one by one can
+      be inefficient as "disks perform better with large transfers".
+    - To make swapping more efficient, one of the technique that VAX/VMS
+      operating system do is "clustering". With clustering, the operating
+      system grouping a large batch of pages together from the global
+      "dirty-page list", and write them to disk all at once, and thus making
+      those pages "clean".
+
+  - Demand zeroing (lazy memory allocations):
+    - For example, let's say we want to allocate heap memory to our application.
+      The naive implementation is that:
+      - The operating system respond to our heap memory allocation request by
+        finding a page in physical memory.
+      - Zeroing those page (for security).
+      - Mapping that physical page into our application's address space (setting
+        up the page table entry).
+    - With demand zeroing, the operating system put a page table entry in our
+      application's address space and mark those page as inaccessible. If the
+      process then read or write to the page, a trap will be triggered (page
+      fault) and operating system take over the process. The operating system
+      will notice that this page is a "demand-zero" page (usually from bit flag
+      in "reserved for operating system" bits), and then the operating system
+      start finding the page in physical memory, zeroing that page, and mapping
+      it into the process' address space. After that, the operating system
+      passing the control back to the application.
+    - If the process never access those "demand-zero" page, the operating system
+      avoid all of that tasks.
+
+  - Copy-on-Write (CoW):
+    - When the operating system need to copy a page from one address space to
+      another, the operating system map that page into the target address space
+      and mark the page as read-only in "both address spaces".
+    - If both of the processes only read the "copied" page, no further action is
+      taken. However, if one of the processes trying to write to those "copied"
+      page, a trap will be triggered and operating system take over the process.
+      The operating system will notice that the page is CoW page, and thus start
+      allocating new page, fill it with data, and map this new page into the
+      address space of process that triggered a trap. After that, the operating
+      system passing the control back to the application and the process
+      continue with its own private copy of the page.
+    - One of the benefit of using CoW approach is the shared library. The shared
+      library can be mapped into the address space of many processes, saving
+      valuable memory space (is this related to linking process with linkers?).
+
+Linux Virtual Memory (x86)
+  - Linux kernel address space:
+    - In classic 32-bit Linux kernel (Linux kernel with 32-bit virtual address
+      space), the split between user applications and kernel portions of the
+      address space takes place at address 0xC0000000, or 3:1 of address space.
+      Thus, the virtual addresses from 0 until 0xBFFFFFFF are for user
+      applications (3 GB), and virtual addresses from 0xC0000000 until
+      0xFFFFFFFF are for kernel (1 GB). 64-bit Linux kernel has a similar split
+      but at slightly different points.
+    - Linux kernel contains 2 types of virtual addresses:
+      - Kernel logical address:
+        - This is the normal virtual address space of the kernel. To get more
+          memory in this address space, we can use kmalloc().
+        - Most kernel data structures live here, such as page tables,
+          per-process kernel stacks, and so forth.
+        - Kernel logical address cannot be swapped to disk.
+        - There's a _direct_ mapping between logical addresses and the first
+          portion of physical memory. Thus, kernel logical address 0xC0000000
+          translates to physical address 0x00000000, 0xC0000FFF translates to
+          physical address 0x00000FFF, and so on. This direct mapping has 2
+          implications:
+          - Simple to translate. These addresses are often treated as if they
+            are indeed physical.
+          - If a chunk of memory is contiguous in kernel logical address space,
+            it is also contiguous in physical memory. This is suitable for
+            operations which need contiguous physical memory to work correctly,
+            such as I/O transfers to and from devices via direct memory access
+            (DMA).
+      - Kernel virtual address:
+        - To get more memory in this address space, we can use vmalloc() which
+          returns a pointer to a "virtually" contiguous region of the specified
+          size.
+        - Kernel virtual address may map to non-contiguous physical pages (and
+          is not suitable for DMA), which make allocate large buffer easier
+          compared to kernel logical address.
+        - In 32-bit Linux kernel, kernel virtual address enable the kernel to
+          use more than 1 GB (from 0xC0000000 until 0xFFFFFFFF).
+
+  - Page table structure:
+    - Moving to a 64-bit address space affects page table structure in x86.
+      Because x86 uses a multi-level page table, the current 64-bit systems use
+      a four-level page table. The full 64-bit nature of the virtual address
+      space is not yet in use, only the bottom 48 bits is in use (bit 0 until
+      bit 47).
+
+  - Large page support:
+    - Intel x86 allows for the use of multiple page sizes, not just the standard
+      4 KB page. Specifically, the recent designs support 2 MB and even 1 GB
+      pages in hardware. Thus, over time Linux kernel evolved to allow
+      applications to utilize these huge pages (the term in Linux kernel).
+    - When a process actively uses a large amount of memory, the process quickly
+      fills up the TLB with translations. If those translations are for 4 KB
+      pages, only a _small amount_ of the total memory can be accessed without
+      inducing TLB misses. Recent research[B+13 reference in the book] shows
+      that some applications spend 10% of their cycles servicing TLB misses.
+    - Huge pages allow a process to access a large portion of memory without TLB
+      misses by using _fewer slots_ in the TLB. One huge page's virtual page
+      number (VPN) in the TLB can hold a lot of virtual addresses, so we will
+      have more TLB hit just by having one VPN in the TLB.
+    - Other benefits of huge pages is the shorter TLB miss path, which means
+      that when TLB miss does occur, it is serviced more quickly (because
+      there's only one page table?).
+    - Linux kernel implement huge pages as on-demand allocation (either through
+      the mmap() or shmget() calls) rather than making that as the default,
+      which means the applications need to explicitly request the memory
+      allocations with huge pages. In this way, most applications would not be
+      affected (and continue using 4 KB pages), and only a few demanding
+      applications that need to be changed to use these interfaces.
+    - More recently, as the need for better TLB behavior is more common among
+      many applications, Linux kernel added _transparent_ huge page support.
+      When this feature is enabled, the operating system automatically looks
+      for opportunity to allocate huge pages (usually 2 MB, but 1 GB on some
+      systems) without requiring application modification.
+    - The biggest trade off using huge pages is "internal fragmentation", which
+      is a page that is large but sparsely used. This can fill memory with large
+      but little (actual) used pages.
+    - Swapping also does not work well with huge pages, sometimes greatly
+      amplifying the amount of I/O a system does.
+
+  - Page cache:
+    - Linux kernel page cache is unified, keeping pages in memory from three
+      primary sources in a "page cache hash table", allowing for quick lookup
+      when the data is needed. These three primary sources are:
+      - Memory-mapped files.
+      - File data and metadata from devices (usually accessed by directing
+        read() and write() system call to the file system).
+      - Heap and stack pages that cover each process (sometimes called
+        _anonymous memory_ because there's no named file underneath).
+    - The page cache tracks if entries are clean (read but not modified) or
+      dirty (modified). Dirty data is periodically written to the backing store
+      (specific file for file data, or swap space for anonymous memory) by
+      background threads (called pdflush), thus ensuring that modified data
+      eventually is written back to persistent storage. This background activity
+      either takes place after a certain time period or if we have too many
+      pages that are considered dirty, this background activity is configurable.
+    - The Linux kernel version of 2Q page replacement policy use 2 lists and
+      dividing memory between them. When the page accessed for the first time,
+      the page is placed on "the inactive list". When the page is re-referenced,
+      the page is promoted to "the active list". When we need to replace the
+      page, the candidate for replacement is taken from the inactive list. Linux
+      kernel also periodically moves pages from the bottom of the active list to
+      inactive list, keeping the active list to about two-thirds of the total
+      page cache size.
+
+  - Buffer overflow:
+    - The idea of these attack is to find a bug in the target system which lets
+      the attacker inject arbitrary data into the target's address space.
+    - Such vulnerabilities sometime arise because the developer assumes that an
+      input will not be overly long, and thus copies the input into a buffer.
+      But because these input is long, it overflows the allocated buffer and
+      _overwriting_ memory of the target.
+    - Some malicious programmers can carefully craft the input that overflows
+      the buffer so as to _inject_ their own code into the targeted system and
+      allow them to take over the system (run arbitrary computations or gaining
+      kernel access right a.k.a privilege escalation).
+    - The first and simple _defense_ against buffer overflow is prevent
+      execution of any code found within certain regions of an address space
+      (like within the stack), basically like having execute permission.
+      The NX (No-eXecute) bit in AMD and XD in intel x86 architecture prevent
+      execution from any page which has these bit set in its corresponding page
+      table entry (PTE). This approach prevents code injected by an attacker
+      into the target's stack from being executed, and thus mitigates the
+      previous problem.
+
+  - Return Oriented Programming (ROP):
+    - The observation behind ROP is that there are lots of bits of code within
+      any program's address space, especially C programs that link with a lot of
+      C library. Thus, an attacker can overwrite the stack such that
+      _the return address_ in the currently executing function points to a
+      desired malicious instruction (or series of instructions), followed by a
+      return instruction.
+    - By stringing together a large number of code (ensuring each return jumps
+      to the next malicious code), the attacker can execute arbitrary code.
+    - To _defend_ against ROP (and its earlier form, the return-to-libc attack),
+      Linux and other systems add another defense mechanism known as address
+      space layout randomization (ASLR). The idea of ASLR is that instead of
+      placing the code, stack, and heap at fixed locations within the virtual
+      address space, the operating system randomizes their placement, thus
+      making it quite challenging to craft the intricate code sequence required
+      to implement ROP attacks.
+    - ASLR is a useful defense mechanism that the Linux kernel also implemented
+      its own kernel address space layout randomization (KASLR).
+
+  - Meltdown and Spectre
+    - The general weakness exploited in Meltdown and Spectre is that the CPUs in
+      modern systems perform all sort of "crazy" behind-the-scenes tricks to
+      improve performance. One class of technique that lies at the core of the
+      problem is called "speculative execution", in which the CPU _guesses_
+      which instructions will soon be executed in the future, and start
+      executing them _ahead of time_. If the guesses are correct, the program
+      runs faster, and if not, the CPU undo their effects on architectural state
+      (like registers) and tries again.
+    - The problem  with "speculation execution" is that it tends to
+      "leave traces" of its execution in various parts of the system, such as
+      processor caches, branch predictors, etc. Such state can make vulnerable
+      the contents of memory, even memory that we thought was protected by the
+      memory management unit (MMU).
+    - One way to increase the kernel protection was thus to remove as much of
+      the kernel address space from each of user process and use a _separate_
+      kernel page table for most of the kernel data (called kernel page table
+      isolation or KPTI). Thus, instead of mapping the kernel's code and data
+      structures into each process, only the barest minimum is kept therein.
+      When a context switch happen (switching to kernel mode), a switch to the
+      kernel page table is now needed.
+    - Using KPTI improve security and avoids some attack vectors but at the cost
+      of performance, as switching page table is costly.
