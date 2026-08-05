@@ -1,0 +1,83 @@
+Instead of our classic view of a single point of execution within a program
+(a single program counter or instruction pointer where instructions are
+being fetched from and executed), a "multi-threaded" program has more than
+one point of execution (multiple program counter or instruction pointer
+that each of which is being fetched from and executed).
+
+Another way to think of multi-thread concept is that each thread is like
+a _separate process_, except that these threads _share_ the same address
+space and thus can access the _same_ data.
+
+The state of a single thread is very similar to that of a process. The
+thread has a program counter (PC) or instruction pointer (IP) that
+tracks where the program is fetching instructions from. Each thread has
+its _own private_ set of registers it uses for computation. Thus, if there
+are two threads that are running on a single processor, when switching from
+the running thread (T1) to run another thread (T2), a "context switch" must
+take place.
+
+The "context switch" between threads is quite similar to the context switch
+between processes, as the register state of the running thread (T1) must be
+saved and the register state of the soon-to-be-running thread (T2) restored
+before running the soon-to-be-running thread (T2). The major difference
+of "context switch" between threads and processes is that the context switch
+between threads use the _same_ address space, while the context switch
+between process use _different_ address space. So there's no need to switch
+page table when we do context switch between threads.
+
+With processes, we saved the process' state (such as registers value,
+program counter, etc) to a process control block (PCB). With threads, we saved
+the thread's state (such as registers value, program counter, etc) to a thread
+control block (TCB).
+
+In a classic process (or single-threaded process), there is a single stack.
+However, in a multi-threaded process, each thread runs independently and call
+into various functions to do whatever work it needs to do. So a multi-threaded
+process has multiple stacks, one stack per thread (a.k.a thread-local storage).
+
+Why use threads?
+  - Parallelism, speeding up the process by using multiple processors to each
+    perform a portion of the work.
+  - To avoid blocking program's progress due to slow I/O. While one thread in
+    our program waits, the CPU scheduler can switch to another thread which is
+    ready to run and do some work.
+(In above cases, we could also use multiple processes instead of threads.
+However, threads share an address space which make sharing data easier.
+Processes are a more sound choice for logically separate tasks where little
+_sharing_ of data structures in memory is needed.)
+
+2 possibilities of running threads:
+  - Thread 1 running first, and then Thread 2 running after Thread 1:
+    - Thread 2 running immediately.
+    - Thread 2 put on hold until we trigger it (?).
+  - Thread 1 and Thread 2 running at the same time.
+
+A "critical section" is a piece of code that accesses a shared resource (like
+a variable or data structure) and must not be concurrently executed by more than
+one thread.
+
+A "mutual exclusion" property guarantees that if one thread is executing within
+the critical section, other threads will be prevented to execute those critical
+section too.
+
+The idea behind making a series of instructions "atomic" is simply expressed
+with the phrase "all or nothing", either the instruction has run to completion
+or not run at all, there is not in-between state.
+
+Sometimes the grouping of many instructions into a single atomic instruction is
+called "transaction", an idea developed in detail in the world of databases and
+transaction processing.
+
+A "race condition" arise if multiple threads of execution enter the "critical
+section" at roughly the _same time_, both attempt to update the shared data
+structure which usually lead to unexpected result.
+
+Subtle difference between "concurrency" and "parallelism":
+  - Concurrency means that multiple processes are active concurrently (at the
+    same time). We can do concurrency with one processor (with time-sharing
+    concept, switching between active processes) or multiple processors. Just
+    because it is active, does not mean it is currently running (?).
+  - Parallelism refers to the _actual_ execution of instructions from multiple
+    processes or threads at the same time on _different_ processors. In order
+    to achieve parallelism, we need multiple processors that are active at the
+    same time.
