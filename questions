@@ -182,3 +182,12 @@ Chapter 23:
      is null or not during debugging process. And if it's null or 0 (from
      page 0), that information might help in debugging the cause of error (?).
 - Q: What is memory mapped files?
+
+Chapter 26:
+- Q: What is 2000(%bx) means?
+- A: It means adding _any_ value in %bx register into 2000 memory address and
+     treat the result as memory address.
+     Reference: https://stackoverflow.com/a/7306662
+     For example:
+     %bx = 0: mov $3, 2000(%bx) -> mov $3, 2000
+     %bx = 2: mov $3, 2000(%bx) -> mov $3, 2002
