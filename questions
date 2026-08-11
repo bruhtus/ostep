@@ -185,9 +185,13 @@ Chapter 23:
 
 Chapter 26:
 - Q: What is 2000(%bx) means?
-- A: It means adding _any_ value in %bx register into 2000 memory address and
+  A: It means adding _any_ value in %bx register into 2000 memory address and
      treat the result as memory address.
      Reference: https://stackoverflow.com/a/7306662
      For example:
      %bx = 0: mov $3, 2000(%bx) -> mov $3, 2000
      %bx = 2: mov $3, 2000(%bx) -> mov $3, 2002
+
+Chapter 27:
+- Q: What happen when we have mismatch lock order for each threads? (From
+     homework question 3)
