@@ -195,3 +195,43 @@ Chapter 26:
 Chapter 27:
 - Q: What happen when we have mismatch lock order for each threads? (From
      homework question 3)
+
+Chapter 28:
+- Q: How do we choose which thread acquire the lock if there are multiple
+     threads waiting? (assuming we are accessing the same data in different
+     threads with the same lock)
+- Q: In figure 28.9, what would happen if the thread release the guard lock
+     after the park() (a function that put the thread to sleep)?
+  A: With the wrong timing, a context switch to the thread that release the lock
+     right before another thread is about to sleep will potentially cause that
+     thread to sleep forever. This problem sometimes called "wakeup/waiting
+     race".
+
+     Illustration:
+     Thread 1                                                       | Thread 2
+     ---                                                            | ---
+     m->guard = 0                                                   |
+     -- Hardware interrupt, switch to Thread 2 --                   |
+                                                                    | unlock()
+                                                                    | -- Hardware interrupt, switch to thread 1 --
+     park() # Keep sleeping, didn't know the lock has been released |
+     ---                                                            | ---
+- Q: In figure 28.9, why we can't set the flag to 1 when the next thread woken
+     up?
+- Q: If we increase the threads with "ticket locks" mechanism, is it possible
+     for one thread to never get the chance to take the lock?
+  A: Probably no, because by the time the "ticket locks" mechanism enter the
+     thread, it will assign the ticket for each thread and make sure that each
+     thread have its turn (at the cost of another thread spinning to wait for
+     the lock). Check `ticket.s` in homework simulation.
+- Q: Is `test-and-test-and-set.s` will improve performance compared to
+     `test-and-set.s`? (from homework question 14)
+  A: Atomic operation need to communicate with other CPU cores to make the
+     operation works. So running a bunch of atomic operations in a tight loop
+     will generate a lot of traffic on the core-to-core communication.
+     With that in mind, using the non-atomic operation before the atomic
+     operation will reduce the traffic on the core-to-mechanism (?).
+     As side notes, if there are no other threads trying to take the lock, the
+     atomic operation will not generate core-to-core communication traffic. So
+     the optimization on `test-and-test-and-set.s` will improve performance if
+     the lock is highly contended across a lot of threads (?).
