@@ -1,0 +1,185 @@
+To evaluate whether a lock works, we should establish some basic criteria:
+- Provide mutual exclusion (prevent multiple threads from entering critical
+  section).
+- Provide fairness (each thread contending for the lock get a fair shot at
+  acquiring the lock once it is free).
+- Performance (the overheads added by using the lock).
+
+Most likely what happen in figure 28.9:
+- When spawning all threads:
+  - thread 1, thread 2, thread 3, thread 4 contending for the lock (maybe at the
+    same time?).
+  - thread 1 -> initialize lock (the lucky one?)
+  - thread 3 -> put in the queue 1 (order based on chance? no info about ordering)
+  - thread 2 -> put in the queue 2
+  - thread 4 -> put in the queue 3
+- After thread 1 finish execute critical section:
+  - thread 1 -> release guard
+  - thread 3 -> holding guard
+  - thread 2 -> put in the queue 1
+  - thread 4 -> put in the queue 2
+- After thread 3 finish execute critical section:
+  - thread 3 -> release guard
+  - thread 2 -> holding guard
+  - thread 4 -> put in the queue 1
+- After thread 2 finish execute critical section:
+  - thread 2 -> release guard
+  - thread 4 -> holding guard
+- After thread 4 finish execute critical section:
+  - thread 4 -> release lock (no more in queue)
+
+There's a problem called "priority inversion", which is when the current thread
+that hold the lock has _lower priority_ and then the scheduler decided to switch
+to another thread that has _higher priority_ that also need the lock, without
+releasing the lock on previous thread.
+
+Example for "priority inversion":
+Let's say we have thread 1 (T1) and thread 2 (T2). At first we run T2 until it's
+doing I/O, which make the CPU scheduler switch to T1. When T1 run, T1 grab the
+lock and enter the critical section. And then, before T1 exit critical section,
+T2 finish I/O and because T2 has higher priority than T1, the CPU scheduler
+switch to T2 and pause the operation on T1. When T2 trying to enter the same
+critical section as T1, T2 can't get the lock so T2 waiting for the lock to be
+available. The problem is that, the lock is in T1 and the CPU scheduler won't
+switch to T1 because T2, which has higher priority, have not finish _yet_. So
+the system is hung because the thread is keep waiting for the lock.
+
+To solve the "priority inversion" problem, there are 2 ways (according to the
+book, read "aside: more reason to avoid spinning: priority inversion"):
+- Use "priority inheritance", which means the higher priority thread that is
+  waiting for the lower priority thread can temporarily boost the lower thread's
+  priority and enabling lower thread to run and overcoming the inversion.
+- Ensure all threads have the same priority.
+
+Futex in linux is "fast user-space locking", check `man 2 futex` for more info.
+
+In figure 28.10, the atomic_bit_test_set() probably something like this:
+```c
+int atomic_bit_test_set(int *mutex, int bit_index)
+{
+  /*
+   * Mutex is the indicator whether we got lock or not.
+   * Only get the left-most bit for the original.
+   */
+  int original = (*mutex) & (1 << bit_index);
+
+  /*
+   * Check whether original is zero or non-zero.
+   * If the mutex has top (or left-most) bit to 0, we set the top bit of mutex
+   * to 1, which means the current thread now has the mutex.
+   */
+  if (!original) {
+    # Changed the top bit in mutex from 0 to 1.
+    # <mutex bits> |= (10000000000000000000000000000000);
+    *mutex |= (1 << bit_index);
+  }
+
+  /*
+   * Return zero or non-zero from the previous mutex value.
+   */
+  return original;
+}
+```
+
+In figure 28.10, the atomic_add_zero() probably something like this:
+```c
+int atomic_add_zero(int *mutex, unsigned mask)
+{
+  int counter = *mutex;
+
+  /*
+   * The result of `counter ^ mask` will only be 0 if and only if
+   * the `counter` bits is also `10000000000000000000000000000000`.
+   * Something like this:
+   * 10000000000000000000000000000000
+   * 10000000000000000000000000000000
+   * -------------------------------- ^
+   * 00000000000000000000000000000000 (total 32 bits)
+   * ^                              ^
+   * bit 31                         bit 0
+   *
+   * So if there is still threads waiting (by the non-top bit or bit 0 until
+   * bit 30), this function will return zero.
+   *
+   * From C99 standard 6.5.3.3 Unary arithmetic operators:
+   * The result of the logical negation operator ! is 0 if the value of its
+   * operand compares unequal to 0, 1 if the value of its operand compares equal
+   * to 0. The result has type int. The expression !E is equivalent to (0==E).
+   */
+  return !(counter ^ mask);
+}
+```
+
+In figure 28.10, the flow is probably something like this:
+- mutex_lock():
+  - Check if the mutex is held or not:
+    - If the mutex is not held (top bit of mutex bits is 0), we give the mutex
+      to the current thread that call mutex_lock() and return immediately.
+    - If the mutex is held by another thread, we continue to the next
+      instruction.
+  - If the mutex is held by another thread (the mutex value is negative, top bit
+    is 1), we increment the mutex value (probably increment the non-top bit or
+    bit 0 until bit 30 from the mutex bits?).
+  - Spinning to wait the lock:
+    - Check if the mutex is held or not:
+      - If the mutex is not held, we give the mutex to the current thread that
+        call mutex_lock(). And then decrement the mutex value (probably
+        decrement the non-top bit or bit 0 until bit 30 from the mutex bits?),
+        and return.
+      - If the mutex is still held by another thread, we continue to the next
+        instruction.
+    - Check if the mutex value is negative (mutex is held by another thread) or
+      not:
+      - If the mutex value is not negative, going back to "check mutex is held
+        or not".
+      - If the mutex value is negative, put the current thread to sleep by
+        calling futex_wait().
+- mutex_unlock():
+  - Check if there are other threads waiting for the mutex or not (from non-top
+    bit or bit 0 until bit 30 from the mutex bits?):
+    - If there are no threads waiting for the mutex, we return immediately.
+    - If there are threads waiting for the mutex, we continue to the next
+      instruction.
+  - If there are threads waiting for the mutex, wake up the next thread.
+
+Check `peterson.s` in homework with this options:
+./threads-locks/x86.py -p threads-locks/peterson.s -a bx=0,bx=1 -M turn,count,100,104 -R ax,bx,cx -H 5 -i 5 -c
+
+About `peterson.s` in homework:
+- What is `turn` supposed to hold?
+  Maybe `turn` can hold either the current thread or another thread turn (?).
+- What is `%cx` supposed to hold?
+  Maybe `%cx` hold another thread turn (?).
+- What is `.spin1` instructions about?
+  It is the instructions to check whether another thread trying to access the
+  critical section.
+- What is `.spin2` instructions about?
+  It is the instructions when another thread trying to enter critical section
+  (after check on `.spin1`), and then we check if the `turn` value is the same
+  as another thread's ID:
+  - If it is the same, the current thread will not go into critical section and
+    wait for the another thread to finish execute the critical section and
+    release the lock.
+  - If it is not the same, the current thread will go into critical section and
+    the another thread will need to wait until the current thread finish execute
+    the critical section and release the lock.
+
+This peterson's algorithm works because of yield to the another thread
+mechanism. If both threads trying to enter the critical section at the same
+time, whichever thread yielded last will wait for another thread (?).
+
+Check `ticket.s` in homework with this options:
+./threads-locks/x86.py -p threads-locks/ticket.s -M ticket,turn,count -R ax,bx -a bx=9 -H 5 -c
+
+About `ticket.s` in homework:
+- With the options above, we will find some interesting pattern here:
+  thread 0: ticket 0 - 3
+  -- interrupt --
+  thread 1: ticket 4 - 7
+  -- interrupt --
+  thread 0: ticket 8 - 11
+  -- interrupt -- (before release the lock on thread 0)
+  thread 1: ticket 12 (keep spinning because the turn is for ticket 11)
+  -- interrupt --
+  thread 0: ticket 13 (but turn is for ticket 12,
+                       so keep spinning until another interrupt and switch to thread 1)
