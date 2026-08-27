@@ -13,7 +13,7 @@ Chapter 15:
 - Q: If the _possible_ virtual memory address is bigger than the physical
      memory address, how do we _keep track_ of each processes address
      space?
-- Q: Do we constantly switching the process everytime the timer interupt occurs?
+- Q: Do we constantly switching the process everytime the timer interrupt occurs?
 - Q: How many memory do kernel stack has, so that we can save the register from
      multiple processes?
 
