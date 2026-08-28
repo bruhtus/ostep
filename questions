@@ -41,7 +41,12 @@ Chapter 17:
      (in contiguous order).
 - Q: How much heap memory do we have? Is it
      "address space size - (code segment + stack segment)"?
-- Q: If we have only have N size of free chunk, not N size + header size,
+- Q: From the book:
+     "The size of the free region is the size of the header plus the
+     size of the space allocated to the user. Thus, when a user requests N bytes
+     of memory, the library does not search for a free chunk of size N; rather,
+     it searches for a free chunk of size N plus the size of the header."
+     If we only have N size of free chunk available, not N size + header size,
      do we take that free chunk or return NULL?
 
 Chapter 18:
