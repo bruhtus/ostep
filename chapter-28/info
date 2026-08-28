@@ -69,8 +69,10 @@ int atomic_bit_test_set(int *mutex, int bit_index)
    * to 1, which means the current thread now has the mutex.
    */
   if (!original) {
-    # Changed the top bit in mutex from 0 to 1.
-    # <mutex bits> |= (10000000000000000000000000000000);
+    /*
+     * Changed the top bit in mutex from 0 to 1.
+     * <mutex bits> |= (10000000000000000000000000000000);
+     */
     *mutex |= (1 << bit_index);
   }
 
