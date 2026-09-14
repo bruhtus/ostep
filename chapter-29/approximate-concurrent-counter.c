@@ -4,20 +4,17 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdatomic.h>
 #include <pthread.h>
+#include <sched.h>
 #include <unistd.h>
 
 #include "../libs-local/measurement.h"
 
 /*
- * TODO:
- * Figure out how to get maximum threads using API.
- *
- * References:
- * - https://www.reddit.com/r/C_Programming/comments/6zxnr1/how_to_find_the_number_of_cores_in_c/
+ * Change this to see the effect of having more threads
+ * than the CPU cores.
  */
-#define MAX_THREADS 10
+#define MAX_THREADS 17
 
 #define PTHREAD_MUTEX_LOCK(lock) \
 	assert(!pthread_mutex_lock(lock))
@@ -27,14 +24,22 @@
 /*
  * We don't need `static` specifier in type definition
  * such as `struct` or `enum`.
+ *
+ * We need cpu_lock just in case multiple threads is
+ * running in the same CPU core. This is to prevent
+ * increment the same counter in multiple threads within
+ * the same CPU core (assuming one CPU core can have
+ * multiple threads) and causing race condition.
+ *
  * References:
  * - https://stackoverflow.com/a/2743984
  * - https://stackoverflow.com/q/57681154
  */
 struct thread_args {
 	unsigned *global_counter;
+	unsigned *cpu_counter;
 	pthread_mutex_t *global_lock;
-	pthread_mutex_t *local_lock;
+	pthread_mutex_t *cpu_lock;
 	unsigned threshold;
 };
 
@@ -74,12 +79,35 @@ int main(int argc, char *argv[])
 
 	unsigned global_counter = 0;
 	pthread_mutex_t global_lock = PTHREAD_MUTEX_INITIALIZER;
-	pthread_mutex_t local_lock = PTHREAD_MUTEX_INITIALIZER;
 
 	args.global_counter = &global_counter;
 	args.global_lock = &global_lock;
-	args.local_lock = &local_lock;
 	args.threshold = 5;
+
+	/*
+	 * References:
+	 * - https://www.reddit.com/r/C_Programming/comments/6zxnr1/how_to_find_the_number_of_cores_in_c/
+	 */
+	long num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
+	/*
+	 * Is there any downside using variable-length array
+	 * instead of using dynamic memory allocation like
+	 * malloc()?
+	 */
+	unsigned cpu_counter[num_cpus];
+	pthread_mutex_t cpu_lock[num_cpus];
+
+	args.cpu_counter = cpu_counter;
+	args.cpu_lock = cpu_lock;
+
+	/*
+	 * Initialize the local cpu counter and lock.
+	 */
+	for (i = 0; i < num_cpus; ++i) {
+		args.cpu_counter[i] = 0;
+		pthread_mutex_init(args.cpu_lock + i, NULL);
+	}
 
 	retval = clock_gettime(
 		CLOCK_REALTIME,
@@ -88,9 +116,6 @@ int main(int argc, char *argv[])
 	assert(!retval);
 
 	/*
-	 * TODO:
-	 * Is this the right concurrent mechanism?
-	 *
 	 * References:
 	 * - https://github.com/xxyzz/ostep-hw/blob/master/29/simple_concurrent_counter.c
 	 * - https://www.classes.cs.uchicago.edu/archive/2018/spring/12300-1/lab6.html
@@ -141,41 +166,47 @@ int main(int argc, char *argv[])
 		result_time.tv_nsec
 	);
 
+	for (i = 0; i < num_cpus; ++i)
+		pthread_mutex_destroy(args.cpu_lock + i);
+
 	return 0;
 }
 
 static void *thread_exec(void *params)
 {
 	struct thread_args *args = params;
-	unsigned i, local_counter;
-
-	local_counter = 0;
+	unsigned i;
 
 	pid_t thread_id = gettid();
 
-	PTHREAD_MUTEX_LOCK(args->local_lock);
+	int current_cpu = sched_getcpu();
+	assert(current_cpu != -1);
+
+	PTHREAD_MUTEX_LOCK(args->cpu_lock + current_cpu);
 
 	for (i = 0; i < args->threshold; ++i) {
-		++local_counter;
+		++(args->cpu_counter[current_cpu]);
 		printf(
-			"local counter: %u (thread ID: %d)\n",
-			local_counter,
+			"local counter: %u (cpu: %d, thread ID: %d)\n",
+			args->cpu_counter[current_cpu],
+			current_cpu,
 			thread_id
 		);
 	}
 
 	PTHREAD_MUTEX_LOCK(args->global_lock);
-	*(args->global_counter) += local_counter;
+	*(args->global_counter) += args->cpu_counter[current_cpu];
 	printf(
-		"local to global: %u (thread ID: %d)\n",
+		"local to global: %u (cpu: %d, thread ID: %d)\n",
 		*(args->global_counter),
+		current_cpu,
 		thread_id
 	);
 	PTHREAD_MUTEX_UNLOCK(args->global_lock);
 
-	local_counter = 0;
+	args->cpu_counter[current_cpu] = 0;
 
-	PTHREAD_MUTEX_UNLOCK(args->local_lock);
+	PTHREAD_MUTEX_UNLOCK(args->cpu_lock + current_cpu);
 
 	return NULL;
 }
