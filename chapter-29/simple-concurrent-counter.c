@@ -15,7 +15,7 @@
 	assert(!pthread_mutex_unlock(lock))
 
 struct counter_info {
-	pthread_mutex_t *lock;
+	pthread_mutex_t lock;
 	unsigned value;
 };
 
@@ -42,7 +42,6 @@ static void *thread_exec(void *);
 int main(void)
 {
 	struct timespec start_time, end_time, result_time;
-	struct counter_info counter;
 	pthread_attr_t attr;
 	cpu_set_t cpu_set;
 	long i, j;
@@ -51,10 +50,18 @@ int main(void)
 	long num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	assert(num_cpus != -1);
 
-	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-	counter.lock = &lock;
-	counter.value = 0;
+	/*
+	 * Do we need to use static variable if we want to
+	 * initialize mutex with PTHREAD_MUTEX_INITIALIZER?
+	 *
+	 * References:
+	 * - https://stackoverflow.com/a/14320588
+	 * - https://www.man7.org/linux/man-pages/man3/pthread_mutex_lock.3.html
+	 */
+	struct counter_info counter = {
+		.value = 0,
+		.lock = PTHREAD_MUTEX_INITIALIZER,
+	};
 
 	retval = pthread_attr_init(&attr);
 	assert(!retval);
@@ -140,7 +147,7 @@ static void *thread_exec(void *params)
 	int current_cpu = sched_getcpu();
 	assert(current_cpu != -1);
 
-	PTHREAD_MUTEX_LOCK(counter->lock);
+	PTHREAD_MUTEX_LOCK(&counter->lock);
 
 	printf(
 		"CPU: %d, Thread ID: %d\n",
@@ -151,7 +158,7 @@ static void *thread_exec(void *params)
 	for (i = 0; i < COUNTER_MAX; ++i)
 		++(counter->value);
 
-	PTHREAD_MUTEX_UNLOCK(counter->lock);
+	PTHREAD_MUTEX_UNLOCK(&counter->lock);
 
 	return NULL;
 }
