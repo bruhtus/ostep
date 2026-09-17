@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sched.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -133,7 +134,15 @@ static void *thread_exec(void *params)
 	 */
 	PTHREAD_MUTEX_LOCK(args->lock);
 
-	printf("Thread ID: %d\n", gettid());
+	int current_cpu = sched_getcpu();
+	assert(current_cpu != -1);
+
+	printf(
+		"CPU: %d, Thread ID: %d\n",
+		current_cpu,
+		gettid()
+	);
+
 	++(*(args->counter));
 
 	PTHREAD_MUTEX_UNLOCK(args->lock);
