@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -23,7 +22,7 @@ int main(void)
 		p1_arg
 	);
 	if (retval != 0) {
-		err = strerror(errno);
+		err = strerror(retval);
 		printf(
 			"pthread_create() failed: %s (line %d)\n",
 			err,
@@ -39,7 +38,7 @@ int main(void)
 		p2_arg
 	);
 	if (retval != 0) {
-		err = strerror(errno);
+		err = strerror(retval);
 		printf(
 			"pthread_create() failed: %s (line %d)\n",
 			err,
@@ -53,7 +52,7 @@ int main(void)
 	 */
 	retval = pthread_join(p1, NULL);
 	if (retval != 0) {
-		err = strerror(errno);
+		err = strerror(retval);
 		printf(
 			"pthread_join() failed: %s (line %d)\n",
 			err,
@@ -68,7 +67,7 @@ int main(void)
 	 */
 	retval = pthread_join(p2, NULL);
 	if (retval != 0) {
-		err = strerror(errno);
+		err = strerror(retval);
 		printf(
 			"pthread_join() failed: %s (line %d)\n",
 			err,
