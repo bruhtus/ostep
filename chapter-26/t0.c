@@ -15,22 +15,11 @@ int main(void)
 
 	puts("main: begin");
 
-	retval = pthread_create(
-		&p1,
-		NULL,
-		my_thread,
-		p1_arg
-	);
-	if (retval != 0) {
-		err = strerror(retval);
-		printf(
-			"pthread_create() failed: %s (line %d)\n",
-			err,
-			__LINE__
-		);
-		return 69;
-	}
-
+	/*
+	 * We can make the thread running in sequential order
+	 * by create the thread in specific order and
+	 * immediately wait for those thread (after creation).
+	 */
 	retval = pthread_create(
 		&p2,
 		NULL,
@@ -47,10 +36,7 @@ int main(void)
 		return 69;
 	}
 
-	/*
-	 * Wait the pthread to terminate.
-	 */
-	retval = pthread_join(p1, NULL);
+	retval = pthread_join(p2, NULL);
 	if (retval != 0) {
 		err = strerror(retval);
 		printf(
@@ -61,11 +47,26 @@ int main(void)
 		return 69;
 	}
 
+	retval = pthread_create(
+		&p1,
+		NULL,
+		my_thread,
+		p1_arg
+	);
+	if (retval != 0) {
+		err = strerror(retval);
+		printf(
+			"pthread_create() failed: %s (line %d)\n",
+			err,
+			__LINE__
+		);
+		return 69;
+	}
+
 	/*
-	 * TODO:
-	 * How to make sure that p2 run first?
+	 * Wait the pthread to terminate.
 	 */
-	retval = pthread_join(p2, NULL);
+	retval = pthread_join(p1, NULL);
 	if (retval != 0) {
 		err = strerror(retval);
 		printf(
