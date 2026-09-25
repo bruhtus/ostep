@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -44,6 +45,7 @@ int main(void)
 	struct timespec start_time, end_time, result_time;
 	pthread_attr_t attr;
 	cpu_set_t cpu_set;
+	const char *err;
 	long i, j;
 	int retval;
 
@@ -133,6 +135,16 @@ int main(void)
 			result_time.tv_sec,
 			result_time.tv_nsec
 		);
+	}
+
+	retval = pthread_attr_destroy(&attr);
+	if (retval) {
+		err = strerror(retval);
+		printf(
+			"pthread_attr_destroy() failed: %s\n",
+			err
+		);
+		return 69;
 	}
 
 	return 0;
