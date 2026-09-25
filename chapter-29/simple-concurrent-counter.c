@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 
-#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -9,11 +9,6 @@
 #include "../libs-local/measurement.h"
 
 #define COUNTER_MAX 100
-
-#define PTHREAD_MUTEX_LOCK(lock) \
-	assert(!pthread_mutex_lock(lock))
-#define PTHREAD_MUTEX_UNLOCK(lock) \
-	assert(!pthread_mutex_unlock(lock))
 
 struct counter_info {
 	pthread_mutex_t lock;
@@ -35,6 +30,7 @@ struct thread_info {
  * https://stackoverflow.com/questions/2251452/how-to-return-a-value-from-pthread-threads-in-c#comment2210136_2251479
  */
 static void *thread_exec(void *);
+static void print_err(int, int, const char *);
 
 /*
  * Reference:
@@ -45,12 +41,15 @@ int main(void)
 	struct timespec start_time, end_time, result_time;
 	pthread_attr_t attr;
 	cpu_set_t cpu_set;
-	const char *err;
 	long i, j;
-	int retval;
+
+	int retval = 0;
 
 	long num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
-	assert(num_cpus != -1);
+	if (num_cpus == -1) {
+		print_err(errno, __LINE__, "sysconf()");
+		return 69;
+	}
 
 	/*
 	 * Do we need to use static variable if we want to
@@ -66,13 +65,23 @@ int main(void)
 	};
 
 	retval = pthread_attr_init(&attr);
-	assert(!retval);
+	if (retval) {
+		print_err(
+			retval,
+			__LINE__,
+			"pthread_attr_init()"
+		);
+		return 69;
+	}
 
 	retval = clock_gettime(
 		CLOCK_REALTIME,
 		&start_time
 	);
-	assert(!retval);
+	if (retval == -1) {
+		print_err(errno, __LINE__, "clock_gettime()");
+		goto cleanup;
+	}
 
 	for (i = 0; i < num_cpus; ++i) {
 		long num_threads = i + 1;
@@ -96,7 +105,14 @@ int main(void)
 				sizeof(cpu_set),
 				&cpu_set
 			);
-			assert(!retval);
+			if (retval) {
+				print_err(
+					retval,
+					__LINE__,
+					"pthread_attr_setaffinity_np()"
+				);
+				goto cleanup;
+			}
 
 			retval = pthread_create(
 				&threads[j].thread,
@@ -104,7 +120,14 @@ int main(void)
 				thread_exec,
 				threads + j
 			);
-			assert(!retval);
+			if (retval) {
+				print_err(
+					retval,
+					__LINE__,
+					"pthread_create()"
+				);
+				goto cleanup;
+			}
 		}
 
 		for (j = 0; j < num_threads; ++j) {
@@ -112,7 +135,14 @@ int main(void)
 				threads[j].thread,
 				NULL
 			);
-			assert(!retval);
+			if (retval) {
+				print_err(
+					retval,
+					__LINE__,
+					"pthread_join()"
+				);
+				goto cleanup;
+			}
 		}
 
 		printf("Counter: %u\n", counter.value);
@@ -122,7 +152,14 @@ int main(void)
 			CLOCK_REALTIME,
 			&end_time
 		);
-		assert(!retval);
+		if (retval) {
+			print_err(
+				errno,
+				__LINE__,
+				"clock_gettime()"
+			);
+			goto cleanup;
+		}
 
 		sub_timespec(
 			start_time,
@@ -137,15 +174,21 @@ int main(void)
 		);
 	}
 
+cleanup:
+	int prev_retval = retval;
+
 	retval = pthread_attr_destroy(&attr);
 	if (retval) {
-		err = strerror(retval);
-		printf(
-			"pthread_attr_destroy() failed: %s\n",
-			err
+		print_err(
+			retval,
+			__LINE__,
+			"pthread_attr_destroy()"
 		);
 		return 69;
 	}
+
+	if (prev_retval)
+		return 69;
 
 	return 0;
 }
@@ -154,13 +197,25 @@ static void *thread_exec(void *params)
 {
 	struct thread_info *info = params;
 	unsigned i;
+	int retval;
 
 	struct counter_info *counter = info->counter;
 
 	int current_cpu = sched_getcpu();
-	assert(current_cpu != -1);
+	if (current_cpu == -1) {
+		print_err(errno, __LINE__, "sched_getcpu()");
+		return NULL;
+	}
 
-	PTHREAD_MUTEX_LOCK(&counter->lock);
+	retval = pthread_mutex_lock(&counter->lock);
+	if (retval) {
+		print_err(
+			retval,
+			__LINE__,
+			"pthread_mutex_lock()"
+		);
+		return NULL;
+	}
 
 	printf(
 		"CPU: %d, Thread ID: %d\n",
@@ -171,7 +226,31 @@ static void *thread_exec(void *params)
 	for (i = 0; i < COUNTER_MAX; ++i)
 		++(counter->value);
 
-	PTHREAD_MUTEX_UNLOCK(&counter->lock);
+	retval = pthread_mutex_unlock(&counter->lock);
+	if (retval) {
+		print_err(
+			retval,
+			__LINE__,
+			"pthread_mutex_unlock()"
+		);
+		return NULL;
+	}
 
 	return NULL;
+}
+
+static void print_err(
+	int err_num,
+	int line_num,
+	const char *func_name
+)
+{
+	const char *err = strerror(err_num);
+
+	printf(
+		"%s failed: %s (line: %d)\n",
+		func_name,
+		err,
+		line_num
+	);
 }
