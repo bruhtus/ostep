@@ -89,11 +89,12 @@ int main(void)
 			 * use pthread_setaffinity_np()
 			 * instead of sched_setaffinity() (?).
 			 */
-			pthread_attr_setaffinity_np(
+			retval = pthread_attr_setaffinity_np(
 				&attr,
 				sizeof(cpu_set),
 				&cpu_set
 			);
+			assert(!retval);
 
 			retval = pthread_create(
 				&threads[j].thread,
