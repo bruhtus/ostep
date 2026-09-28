@@ -217,10 +217,16 @@ static void *thread_exec(void *params)
 		return NULL;
 	}
 
+	/*
+	 * Still not sure what is the difference between
+	 * POSIX thread ID (from pthread_create() or
+	 * pthread_self()) and gettid() (linux specific
+	 * system call).
+	 */
 	printf(
-		"CPU: %d, Thread ID: %d\n",
+		"CPU: %d, Thread ID: %ld\n",
 		current_cpu,
-		gettid()
+		info->thread_id
 	);
 
 	for (i = 0; i < COUNTER_MAX; ++i)
