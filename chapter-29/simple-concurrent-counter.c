@@ -17,7 +17,7 @@ struct counter_info {
 
 struct thread_info {
 	struct counter_info *counter;
-	pthread_t thread;
+	pthread_t thread_id;
 };
 
 /*
@@ -115,7 +115,7 @@ int main(void)
 			}
 
 			retval = pthread_create(
-				&threads[j].thread,
+				&threads[j].thread_id,
 				&attr,
 				thread_exec,
 				threads + j
@@ -132,7 +132,7 @@ int main(void)
 
 		for (j = 0; j < num_threads; ++j) {
 			retval = pthread_join(
-				threads[j].thread,
+				threads[j].thread_id,
 				NULL
 			);
 			if (retval) {
