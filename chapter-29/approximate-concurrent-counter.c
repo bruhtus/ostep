@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 	 * - https://www.reddit.com/r/C_Programming/comments/6zxnr1/how_to_find_the_number_of_cores_in_c/
 	 */
 	long num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	assert(num_cpus != -1);
 
 	/*
 	 * Is there any downside using variable-length array
