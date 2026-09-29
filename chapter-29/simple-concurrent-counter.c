@@ -2,11 +2,11 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <pthread.h>
 #include <unistd.h>
 
 #include "../libs-local/measurement.h"
+#include "../libs-local/utils.h"
 
 #define COUNTER_MAX 100
 
@@ -30,7 +30,6 @@ struct thread_info {
  * https://stackoverflow.com/questions/2251452/how-to-return-a-value-from-pthread-threads-in-c#comment2210136_2251479
  */
 static void *thread_exec(void *);
-static void print_err(int, int, const char *);
 
 /*
  * Reference:
@@ -243,20 +242,4 @@ static void *thread_exec(void *params)
 	}
 
 	return NULL;
-}
-
-static void print_err(
-	int err_num,
-	int line_num,
-	const char *func_name
-)
-{
-	const char *err = strerror(err_num);
-
-	printf(
-		"%s failed: %s (line: %d)\n",
-		func_name,
-		err,
-		line_num
-	);
 }
