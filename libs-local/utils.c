@@ -9,7 +9,11 @@ void print_err(
 {
 	const char *err = strerror(err_num);
 
-	printf(
+	/*
+	 * Print the error message in standard error.
+	 */
+	dprintf(
+		2,
 		"%s failed: %s (line: %d)\n",
 		func_name,
 		err,
