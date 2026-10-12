@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <sched.h>
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -318,10 +319,14 @@ static void print_thread_err(
 	pthread_t thread_id
 )
 {
-	print_err(err_num, line_num, func_name);
+	const char *err = strerror(err_num);
+
 	dprintf(
 		2,
-		"CPU: %d, thread ID: %ld\n",
+		"%s failed: %s (line: %d)\nCPU: %d, thread ID: %ld\n",
+		func_name,
+		err,
+		line_num,
 		current_cpu,
 		thread_id
 	);
