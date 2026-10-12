@@ -83,7 +83,18 @@ int main(void)
 
 		struct thread_info threads[num_threads];
 
-		printf("THREADS: %ld\n", num_threads);
+		retval = sched_getcpu();
+		if (retval == -1) {
+			print_err(errno, __LINE__, "sched_getcpu()");
+			goto cleanup;
+		}
+
+		printf(
+			"THREADS: %ld, current CPU: %d, thread ID: %ld\n",
+			num_threads,
+			retval,
+			pthread_self()
+		);
 
 		for (j = 0; j < num_threads; ++j) {
 			pthread_mutex_init(
