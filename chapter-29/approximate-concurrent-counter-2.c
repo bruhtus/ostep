@@ -122,13 +122,23 @@ int main(void)
 				&cpu_set
 			);
 			if (retval) {
-				last_iterator = j + 1;
+				num_threads = j;
 				print_err(
 					retval,
 					__LINE__,
 					"pthread_attr_setaffinity_np()"
 				);
-				goto cleanup;
+				dprintf(
+					2,
+					"Thread %ld failed!\n",
+					j
+				);
+				/*
+				 * Still not sure how to test
+				 * pthread_attr_setaffinity_np()
+				 * failure condition.
+				 */
+				break;
 			}
 
 			retval = pthread_create(
@@ -138,13 +148,18 @@ int main(void)
 				threads + j
 			);
 			if (retval) {
-				last_iterator = j + 1;
+				num_threads = j;
 				print_err(
 					retval,
 					__LINE__,
 					"pthread_create()"
 				);
-				goto cleanup;
+				dprintf(
+					2,
+					"Thread %ld failed!\n",
+					j
+				);
+				break;
 			}
 		}
 
