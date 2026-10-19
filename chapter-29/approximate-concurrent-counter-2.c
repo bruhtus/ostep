@@ -81,6 +81,16 @@ int main(void)
 	for (i = 0; i < num_cpus; ++i) {
 		long num_threads = i + 1;
 
+		/*
+		 * Be careful when using variable length array
+		 * with goto statement, especially if the
+		 * initialization variable length array after
+		 * the use of goto statement because such
+		 * action is forbidden by the C standard (?).
+		 *
+		 * Reference:
+		 * https://stackoverflow.com/a/20654542
+		 */
 		struct thread_info threads[num_threads];
 
 		retval = sched_getcpu();
