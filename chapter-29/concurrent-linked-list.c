@@ -21,12 +21,19 @@ struct list_type {
 	pthread_mutex_t lock;
 };
 
-struct thread_args_type {
+struct thread_args_insert_type {
 	struct list_type *list;
 	unsigned key;
 };
 
+struct thread_args_lookup_type {
+	struct node_type *node;
+	pthread_mutex_t *lock;
+	unsigned key;
+};
+
 static void *thread_insert(void *);
+static void *thread_lookup(void *);
 
 /*
  * The mechanism used in this linked list is the prepend
@@ -48,7 +55,12 @@ int main(void)
 	}
 
 	pthread_t thread_ids[num_cpus];
-	struct thread_args_type thread_args[num_cpus];
+
+	struct thread_args_insert_type thread_args_insert[num_cpus];
+	struct thread_args_lookup_type thread_args_lookup[num_cpus];
+
+	pthread_mutex_t lookup_lock = PTHREAD_MUTEX_INITIALIZER;
+	unsigned lookup_key = 6;
 
 	/*
 	 * When prepend the new node in concurrent, is
@@ -63,14 +75,14 @@ int main(void)
 	};
 
 	for (i = 0; i < num_cpus; ++i) {
-		thread_args[i].list = &list;
-		thread_args[i].key = i;
+		thread_args_insert[i].list = &list;
+		thread_args_insert[i].key = i;
 
 		retval = pthread_create(
 			thread_ids + i,
 			NULL,
 			thread_insert,
-			thread_args + i
+			thread_args_insert + i
 		);
 		if (retval) {
 			num_cpus = i;
@@ -159,6 +171,80 @@ int main(void)
 		}
 	}
 
+	/*
+	 * Search specific key in each of the node in parallel
+	 * (assuming there is only one key in the entire
+	 * linked list).
+	 * Assign each node to its own thread, for example:
+	 * thread 1 -> node 15 (head node)
+	 * thread 2 -> node 14
+	 * thread 3 -> node 13
+	 * ...
+	 * thread 16 -> node 0
+	 */
+	struct node_type *lookup_node = list.head;
+	for (i = 0; i < num_cpus; ++i) {
+		thread_args_lookup[i].lock = &lookup_lock;
+		thread_args_lookup[i].node = lookup_node;
+		thread_args_lookup[i].key = lookup_key;
+
+		retval = pthread_create(
+			thread_ids + i,
+			NULL,
+			thread_lookup,
+			thread_args_lookup + i
+		);
+		if (retval) {
+			num_cpus = i;
+			print_err(
+				retval,
+				__LINE__,
+				"pthread_create()"
+			);
+			break;
+		}
+
+		/*
+		 * If lookup_node is NULL, we are at the end
+		 * of linked list.
+		 */
+		lookup_node = lookup_node->next_node;
+		if (!lookup_node)
+			break;
+	}
+
+	void *thread_id_key = NULL;
+	for (i = 0; i < num_cpus; ++i) {
+		retval = pthread_join(
+			thread_ids[i],
+			&thread_id_key
+		);
+		if (retval) {
+			print_err(
+				retval,
+				__LINE__,
+				"pthread_join()"
+			);
+			goto cleanup;
+		}
+
+		/*
+		 * Still not sure if early exit from
+		 * pthread_join() loop is a good idea or not.
+		 */
+		if (thread_id_key)
+			break;
+	}
+
+	if (thread_id_key)
+		printf(
+			"Key %u found in thread ID %lu\n",
+			lookup_key,
+			(pthread_t)thread_id_key
+		);
+	else
+		printf("Key %u not found\n", lookup_key);
+
 cleanup:
 	int prev_retval = retval;
 
@@ -183,7 +269,7 @@ static void *thread_insert(void *params)
 {
 	int retval;
 
-	struct thread_args_type *args = params;
+	struct thread_args_insert_type *args = params;
 	struct list_type *list = args->list;
 
 	int current_cpu = sched_getcpu();
@@ -241,4 +327,39 @@ static void *thread_insert(void *params)
 	}
 
 	return NULL;
+}
+
+static void *thread_lookup(void *params)
+{
+	int retval;
+
+	struct thread_args_lookup_type *args = params;
+	pthread_t thread_id_key = 0;
+
+	if (args->node->key == args->key) {
+		retval = pthread_mutex_lock(args->lock);
+		if (retval) {
+			print_err(
+				retval,
+				__LINE__,
+				"pthread_mutex_lock()"
+			);
+			return NULL;
+		}
+
+		thread_id_key = pthread_self();
+		printf("thread_id_key: %lu\n", thread_id_key);
+
+		retval = pthread_mutex_unlock(args->lock);
+		if (retval) {
+			print_err(
+				retval,
+				__LINE__,
+				"pthread_mutex_unlock()"
+			);
+			return NULL;
+		}
+	}
+
+	return (void *)thread_id_key;
 }
